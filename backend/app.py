@@ -14,7 +14,13 @@ app = Flask(__name__)
 # Load environment variables from .env (for local development)
 # Render will set these automatically in the environment.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+client = None
+
+if GROQ_API_KEY:
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
+    except Exception:
+        client = None
 
 
 # ALL 20 ORIGINAL COUNTRIES RESTORED EXACTLY
