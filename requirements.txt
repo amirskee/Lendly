@@ -2,4 +2,4 @@ Flask==3.0.3
 Werkzeug==3.0.3
 groq==0.10.0
 python-dotenv==1.0.1
-qunicorn
+gunicorn==23.0.0
