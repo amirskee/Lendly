@@ -3,67 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lendly | Global Underwriting Workspace</title>
+    <title>Lendly | AI Credit Intelligence Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: { navy: '#0f172a', lendlypurple: '#6B46C1' } } }
+            theme: { extend: {
+                colors: { navy: '#0f172a', lendlypurple: '#6B46C1' },
+                fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] }
+            } }
         }
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/d3-delaunay@6"></script>
     <style>
-        body { transition: background-color 0.3s, color 0.3s; }
-        .premium-glass {
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.05);
+        body { 
+            transition: background-color 0.3s, color 0.3s; 
+            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; 
+            /* Premium Soft Light Glassmorphism Background */
+            background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 50%, #fce7f3 100%);
+            background-attachment: fixed;
         }
-        .dark .premium-glass {
-            background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.35);
-        }
-        .vertical-text { writing-mode: vertical-lr; transform: rotate(180deg); }
         
-        #mapContainer { width: 100%; height: 480px; position: relative; border-radius: 1.5rem; overflow: hidden; }
-        #geo-map { height: 480px !important; width: 100% !important; display: block; background: #f3f4f6; }
+        .dark body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+        }
+
+        .panel, .premium-glass {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 24px rgba(31, 38, 135, 0.04);
+        }
+        
+        .dark .panel, .dark .premium-glass { 
+            background: rgba(15, 23, 42, 0.65); 
+            border-color: rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); 
+        }
+
+        #aiBox {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .dark #aiBox {
+            background: rgba(15, 23, 42, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .vertical-text { writing-mode: vertical-lr; transform: rotate(180deg); }
+        #mapContainer { width: 100%; height: 560px; position: relative; border-radius: 0.5rem; overflow: hidden; }
+        #geo-map { height: 560px !important; width: 100% !important; display: block; background: transparent; }
 
         @keyframes breathingPulse {
-            0% { transform: scale(0.92); opacity: 0.4; box-shadow: 0 0 0 0 rgba(107, 70, 193, 0.7); }
+            0% { transform: scale(0.92); opacity: 0.4; box-shadow: 0 0 0 0 rgba(107, 70, 193, 0.55); }
             50% { transform: scale(1.06); opacity: 0.9; box-shadow: 0 0 0 14px rgba(107, 70, 193, 0); }
             100% { transform: scale(0.92); opacity: 0.4; box-shadow: 0 0 0 0 rgba(107, 70, 193, 0); }
         }
         .hero-pulse-ring { animation: breathingPulse 2s infinite ease-in-out; }
+        .flowline { stroke-dasharray: 7 11; animation: flowdash 1.1s linear infinite; }
+        @keyframes flowdash { to { stroke-dashoffset: -36; } }
+
+        .peer-top { filter: drop-shadow(0 0 5px rgba(16,185,129,0.95)); }
+        .peer-bottom { filter: drop-shadow(0 0 5px rgba(239,68,68,0.9)); }
+        .skl { color: transparent !important; background: linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.1s infinite; border-radius: 4px; user-select: none; }
+        .dark .skl { background: linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%); background-size: 200% 100%; }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+        .typing-dot { width: 6px; height: 6px; border-radius: 9999px; background: #94a3b8; display: inline-block; animation: tbounce 1.2s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: .15s; } .typing-dot:nth-child(3) { animation-delay: .3s; }
+        @keyframes tbounce { 0%,60%,100% { transform: translateY(0); opacity:.5 } 30% { transform: translateY(-4px); opacity:1 } }
+        .leaflet-tooltip.geo-tip { background:#0f172a; color:#f8fafc; border:1px solid #334155; border-radius:6px; font-size:11px; font-weight:600; padding:6px 9px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+        .leaflet-tooltip.geo-tip::before { border-top-color:#0f172a; }
+        input[type=range] { height: 5px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero-pulse-ring, .flowline, .skl, .typing-dot { animation: none !important; }
+        }
     </style>
 </head>
-<body class="bg-gradient-to-tr from-purple-200 via-pink-100 to-purple-300 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 font-sans text-slate-800 dark:text-slate-100 p-4 md:p-8 antialiased pb-20 min-h-screen">
+<body class="text-slate-800 dark:text-slate-100 p-4 md:p-8 antialiased pb-20 min-h-screen">
 
     <div class="fixed top-28 left-0 z-[5000]">
-        <button onclick="toggleSidebarDrawer(true)" class="bg-white/40 dark:bg-slate-900/40 border border-l-0 border-white/40 backdrop-blur-md text-slate-800 dark:text-white px-2 py-5 rounded-r-2xl shadow-xl font-bold text-[10px] tracking-wider uppercase flex flex-col items-center gap-2">
-            <span>➡️</span> <span class="vertical-text">System Workspace</span>
+        <button onclick="toggleSidebarDrawer(true)" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-l-0 border-white/50 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-2 py-5 rounded-r-lg shadow-sm font-bold text-[10px] tracking-wider uppercase flex flex-col items-center gap-2 hover:text-lendlypurple transition-colors">
+            <span>➡️</span> <span class="vertical-text">Workspace</span>
         </button>
     </div>
 
-    <div id="sidebarDrawer" class="fixed top-0 left-0 h-full w-80 sm:w-96 premium-glass z-[9999] transform -translate-x-full transition-transform duration-300 flex flex-col rounded-r-3xl">
-        <div class="p-5 border-b border-white/20 flex justify-between items-center">
+    <div id="sidebarDrawer" class="fixed top-0 left-0 h-full w-80 sm:w-96 panel z-[9999] transform -translate-x-full transition-transform duration-300 flex flex-col rounded-l-none border-l-0">
+        <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
             <div>
-                <h3 class="font-black text-slate-900 dark:text-white text-lg">Underwriter Workspace</h3>
+                <h3 class="font-extrabold text-slate-900 dark:text-white text-lg">Underwriter Workspace</h3>
                 <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Compliance Assets</p>
             </div>
             <button onclick="toggleSidebarDrawer(false)" class="text-slate-400 hover:text-slate-900 dark:hover:text-white text-lg font-bold">✕</button>
         </div>
         <div class="p-6 flex-grow overflow-y-auto space-y-6 text-xs">
-            <div class="space-y-3 bg-white/40 dark:bg-slate-950/40 p-4 rounded-2xl border border-white/20">
+            <div class="space-y-3 bg-white/50 dark:bg-slate-950/50 p-4 rounded-lg border border-white/60 dark:border-slate-800 shadow-sm">
                 <h4 class="font-bold uppercase tracking-wider text-slate-400 text-[11px]">Map Legend Context</h4>
-                <div class="space-y-3 text-[14px] font-bold text-slate-700 dark:text-slate-200">
-                    <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-orange-500"></span> <span>🍊 Orange = Foot Traffic</span></div>
-                    <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-blue-500"></span> <span>🔷 Blue = Trajectory</span></div>
-                    <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-red-500"></span> <span>🛑 Red = Saturation</span></div>
-                    <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-green-500"></span> <span>❇️ Green = Low Risk Flow</span></div>
+                <div class="space-y-2.5 text-[13px] font-semibold text-slate-700 dark:text-slate-200">
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-orange-500"></span> <span>Foot traffic density</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span> <span>Growth trajectory</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500"></span> <span>Competitor saturation</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-green-500"></span> <span>Transaction flows</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-violet-500"></span> <span>Customer segments</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-slate-400"></span> <span>Market territories</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> <span>Sector peer benchmark</span></div>
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span> <span>Local risk zones</span></div>
                 </div>
             </div>
             <div class="space-y-3">
@@ -73,23 +125,29 @@
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto space-y-8">
-        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/20 pb-6 gap-4">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-300 dark:border-slate-800 pb-5 gap-4">
             <div class="flex items-center space-x-4">
-                <div class="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl text-white shadow-xl">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <div class="bg-lendlypurple p-2.5 rounded-lg text-white shadow-md">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Lendly</h1>
-                    <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Global Underwriting Node</p>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-none">Lendly</h1>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">AI Credit Intelligence Platform</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md">Search or upload a business profile to instantly assess loan eligibility, risk, and repayment probability.</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3 w-full sm:w-auto">
-                <button onclick="toggleDarkMode()" class="premium-glass p-2.5 rounded-xl hover:scale-105 transition-transform">
-                    <svg id="themeIcon" class="w-5 h-5 text-indigo-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <button onclick="exportReport()" class="hidden md:flex items-center gap-2 panel text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-xs font-bold hover:border-lendlypurple hover:text-lendlypurple transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    Export Report
+                </button>
+                <button onclick="toggleDarkMode()" class="panel p-2.5 rounded-lg hover:border-lendlypurple transition-colors">
+                    <svg id="themeIcon" class="w-5 h-5 text-lendlypurple dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 </button>
                 <div class="flex items-center">
-                    <select id="countrySelector" onchange="loadMarketData()" class="w-full premium-glass font-bold text-slate-800 dark:text-white px-4 py-2.5 rounded-xl focus:outline-none cursor-pointer">
+                    <select id="countrySelector" onchange="loadMarketData()" class="w-full panel font-bold text-slate-800 dark:text-white px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-lendlypurple/40 cursor-pointer text-sm">
                         <option>India</option><option>Uzbekistan</option><option>Kenya</option><option>Brazil</option><option>USA</option>
                         <option>Indonesia</option><option>Nigeria</option><option>Mexico</option><option>Philippines</option><option>United Kingdom</option>
                         <option>Germany</option><option>France</option><option>Japan</option><option>Australia</option><option>Canada</option>
@@ -99,64 +157,218 @@
             </div>
         </header>
 
-        <div class="premium-glass p-6 rounded-2xl flex flex-col md:flex-row items-center gap-6 shadow-xl">
-            <h2 class="text-lg font-bold text-slate-900 dark:text-white whitespace-nowrap">Search</h2>
-            <div class="flex-grow flex w-full relative">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center"><svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
-                <input type="text" id="searchInput" placeholder="Search business profiles or pass explicit coordinates..." class="w-full pl-11 pr-4 py-4 bg-white/40 dark:bg-slate-950/40 border border-white/30 dark:border-slate-800 rounded-l-xl focus:outline-none text-sm text-slate-900 dark:text-white shadow-inner" onkeypress="catchSearchEnter(event)">
-                <button onclick="handleSearchQuery()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-r-xl font-bold text-sm transition-colors shadow-md">Search</button>
-            </div>
-            <button onclick="document.getElementById('docModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-sm transition-colors shadow-md whitespace-nowrap border border-blue-500">Upload Business File</button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="premium-glass p-5 rounded-2xl flex items-center space-x-4 shadow-sm">
-                <div class="bg-indigo-500/10 p-3 rounded-xl text-indigo-600 dark:text-indigo-400"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg></div>
-                <div><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">AI Credit Rating</p><p id="card_rating" class="text-3xl font-black text-slate-900 dark:text-white">--</p></div>
-            </div>
-            <div class="premium-glass p-5 rounded-2xl flex items-center space-x-4 shadow-sm">
-                <div class="bg-indigo-500/10 p-3 rounded-xl text-indigo-600 dark:text-indigo-400"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></div>
-                <div><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Geospatial Grade</p><p id="card_grade" class="text-3xl font-black text-slate-900 dark:text-white">--</p></div>
-            </div>
-            <div class="premium-glass p-5 rounded-2xl flex items-center space-x-4 shadow-sm">
-                <div class="bg-indigo-500/10 p-3 rounded-xl text-indigo-600 dark:text-indigo-400"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg></div>
-                <div><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cash Flow Volatility</p><p id="card_volatility" class="text-3xl font-black text-slate-900 dark:text-white">--</p></div>
-            </div>
-            <div class="premium-glass p-5 rounded-2xl flex items-center space-x-4 shadow-sm">
-                <div class="bg-indigo-500/10 p-3 rounded-xl text-indigo-600 dark:text-indigo-400"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-                <div><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Evaluation Speed</p><p id="card_speed" class="text-3xl font-black text-slate-900 dark:text-white">--</p></div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 premium-glass p-0 overflow-hidden shadow-2xl relative">
-                <div id="mapContainer">
-                    <div id="geo-map"></div>
+        <div class="panel p-5 rounded-lg">
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
+                <div class="flex-grow flex w-full relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center"><svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+                    <input type="text" id="searchInput" placeholder="Search business name, GST number, address, or coordinates" class="w-full pl-11 pr-4 py-3.5 bg-white/50 dark:bg-slate-950/50 border border-white/60 dark:border-slate-800 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-lendlypurple/40 text-sm text-slate-900 dark:text-white" onkeypress="catchSearchEnter(event)">
+                    <button onclick="handleSearchQuery()" class="bg-lendlypurple hover:bg-purple-800 text-white px-8 py-3.5 rounded-r-lg font-bold text-sm transition-colors shadow-sm">Search</button>
+                </div>
+                <div class="grid grid-cols-3 gap-2 lg:w-auto w-full">
+                    <button onclick="document.getElementById('docModal').classList.remove('hidden')" class="col-span-2 bg-white/60 dark:bg-slate-900/60 border border-white/80 dark:border-slate-700 text-slate-800 dark:text-slate-200 px-4 py-3.5 rounded-lg font-bold text-[11px] hover:border-lendlypurple hover:text-lendlypurple transition-colors shadow-sm flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        Upload Business File <span class="text-slate-500 font-semibold">(PDF/CSV)</span>
+                    </button>
+                    <button onclick="document.getElementById('manualModal').classList.remove('hidden')" class="col-span-1 bg-transparent border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 px-3 py-3.5 rounded-lg font-semibold text-[10px] hover:text-lendlypurple transition-colors">Manual Entry</button>
                 </div>
             </div>
-            <div class="lg:col-span-1 flex flex-col justify-between gap-6">
-                <div class="premium-glass p-5 rounded-2xl space-y-4 flex-grow shadow-md flex flex-col justify-between">
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="font-black text-sm text-slate-900 dark:text-white">Infrastructural Overlays Feeds</h4>
-                            <p class="text-[9px] uppercase font-bold text-slate-400">Layer Ingestion Controls</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="btn_traffic" onclick="toggleMapLayer('traffic')" class="p-3 rounded-xl border border-white/20 font-bold text-[10px] bg-indigo-600 text-white shadow-sm">🚶 Foot Traffic</button>
-                            <button id="btn_growth" onclick="toggleMapLayer('growth')" class="p-3 rounded-xl border border-white/20 font-bold text-[10px] bg-white/40 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200 shadow-sm">📈 Trajectory</button>
-                            <button id="btn_competitors" onclick="toggleMapLayer('competitors')" class="p-3 rounded-xl border border-white/20 font-bold text-[10px] bg-white/40 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200 shadow-sm">🏪 Saturation</button>
-                            <button id="btn_flows" onclick="toggleMapLayer('flows')" class="p-3 rounded-xl border border-white/20 font-bold text-[10px] bg-white/40 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200 shadow-sm">💰 Transaction</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+            <div class="panel p-6 rounded-lg lg:col-span-3">
+                <div class="flex justify-between items-start border-b border-slate-200/60 dark:border-slate-800 pb-4">
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1.5">Evaluated Borrower Profile</p>
+                        <div class="flex items-center gap-2.5">
+                            <span id="profile_icon" class="text-2xl bg-white/50 dark:bg-black/20 p-2 rounded-full shadow-sm">🛍️</span>
+                            <div>
+                                <span id="profile_name" class="font-extrabold text-xl text-slate-900 dark:text-white block leading-tight">--</span>
+                                <span id="profile_loc" class="text-xs text-slate-600 dark:text-slate-400">--</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="bg-white/40 dark:bg-slate-950/40 p-4 border border-white/20 rounded-xl space-y-2.5 shadow-inner mt-4">
-                        <p class="text-[9px] font-black text-indigo-500 uppercase tracking-wider">ACTIVE AUTOMATED EVALUATION SUMMARY</p>
+                    <div class="text-right">
+                        <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Owner Verification</p>
+                        <span id="owner_verified" class="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 border border-emerald-200/50 dark:border-emerald-800 px-2 py-1 rounded inline-block">--</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 pt-4 text-sm">
+                    <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Business Age</p><p id="meta_age" class="font-bold text-slate-900 dark:text-white mt-0.5">--</p></div>
+                    <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Monthly Revenue Est.</p><p id="meta_revenue" class="font-bold text-slate-900 dark:text-white mt-0.5">--</p></div>
+                    <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Monthly Transactions</p><p id="meta_txns" class="font-bold text-slate-900 dark:text-white mt-0.5">--</p></div>
+                    <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Avg Daily Sales</p><p id="meta_daily" class="font-bold text-slate-900 dark:text-white mt-0.5">--</p></div>
+                    <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Repayment History</p><p id="meta_history" class="font-bold text-slate-900 dark:text-white mt-0.5">--</p></div>
+                    <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Evaluated</p><p id="meta_evaluated" class="font-bold text-slate-900 dark:text-white mt-0.5">--</p></div>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-200/60 dark:border-slate-800">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2">Uploaded Documents Status</p>
+                    <div id="docsChecklist" class="flex flex-wrap gap-2 text-[11px] font-bold"></div>
+                </div>
+            </div>
+
+            <div id="verdictBorderBox" class="panel p-6 rounded-lg lg:col-span-2 border-l-4 border-l-lendlypurple flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase block mb-1">Credit Decision</span>
+                        <h3 id="frame_tier" class="text-lg font-black text-lendlypurple dark:text-purple-400 leading-tight">--</h3>
+                        <p class="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1.5">Repayment Probability: <span id="frame_prob" class="font-extrabold text-slate-900 dark:text-white">--</span></p>
+                    </div>
+                    <div class="bg-white/40 dark:bg-slate-950/40 border border-white/60 dark:border-slate-800 rounded-lg p-4 space-y-2 text-xs font-semibold shadow-sm">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Optimal Loan Terms</p>
+                        <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Amount:</span><span id="frame_amt" class="font-bold">--</span></div>
+                        <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Adjusted APR:</span><span class="font-bold">11.5%</span></div>
+                        <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Tenure Length:</span><span class="font-bold">12 months</span></div>
+                        <div class="flex justify-between text-lendlypurple dark:text-purple-400 border-t border-slate-300 dark:border-slate-800 pt-2"><span class="font-bold">Monthly EMI:</span><span id="frame_emi" class="font-extrabold">--</span></div>
+                    </div>
+                </div>
+                <div class="pt-4 mt-4 border-t border-slate-200/60 dark:border-slate-800">
+                    <p id="decision_footer" class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="panel p-5 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <div class="bg-lendlypurple/10 p-2.5 rounded-lg text-lendlypurple dark:text-purple-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg></div>
+                    <div><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">AI Credit Score</p><p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-0.5"><span id="card_rating">--</span><span class="text-sm font-bold text-slate-400"> / 900</span></p></div>
+                </div>
+                <p id="sub_rating" class="text-[11px] text-slate-600 dark:text-slate-400 mt-3 leading-snug">--</p>
+            </div>
+            <div class="panel p-5 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <div class="bg-lendlypurple/10 p-2.5 rounded-lg text-lendlypurple dark:text-purple-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></div>
+                    <div><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Geospatial Grade</p><p id="card_grade" class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-0.5">--</p></div>
+                </div>
+                <p id="sub_grade" class="text-[11px] text-slate-600 dark:text-slate-400 mt-3 leading-snug">--</p>
+            </div>
+            <div class="panel p-5 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <div class="bg-lendlypurple/10 p-2.5 rounded-lg text-lendlypurple dark:text-purple-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                    <div><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cash Flow Volatility</p><p id="card_volatility" class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-0.5">--</p></div>
+                </div>
+                <p id="sub_volatility" class="text-[11px] text-slate-600 dark:text-slate-400 mt-3 leading-snug">--</p>
+            </div>
+            <div class="panel p-5 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <div class="bg-lendlypurple/10 p-2.5 rounded-lg text-lendlypurple dark:text-purple-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg></div>
+                    <div><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Evaluation Speed</p><p id="card_speed" class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-0.5">--</p></div>
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-3 leading-snug">Full multi-signal evaluation vs. 5–15 days for traditional underwriting.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="panel p-6 rounded-lg lg:col-span-1">
+                <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-3">Decision Drivers</p>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 mb-1.5">Positive Drivers</p>
+                        <ul id="drivers_positive" class="space-y-1 text-xs font-semibold text-slate-700 dark:text-slate-300"></ul>
+                    </div>
+                    <div class="border-t border-slate-200/60 dark:border-slate-800 pt-3">
+                        <p class="text-xs font-extrabold text-red-500 mb-1.5">Risk Drivers</p>
+                        <ul id="drivers_risk" class="space-y-1 text-xs font-semibold text-slate-700 dark:text-slate-300"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:col-span-2">
+                <div class="panel p-5 rounded-lg"><p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Payment Velocity <span class="text-slate-400 font-semibold">· 40% weight</span></p><p id="text_vel" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="bar_vel" class="bg-lendlypurple h-1.5 rounded-full transition-all duration-500"></div></div></div>
+                <div class="panel p-5 rounded-lg"><p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Location Demand <span class="text-slate-400 font-semibold">· 25% weight</span></p><p id="text_loc" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="bar_loc" class="bg-lendlypurple h-1.5 rounded-full transition-all duration-500"></div></div></div>
+                <div class="panel p-5 rounded-lg"><p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Pattern Consistency <span class="text-slate-400 font-semibold">· 20% weight</span></p><p id="text_con" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="bar_con" class="bg-lendlypurple h-1.5 rounded-full transition-all duration-500"></div></div></div>
+                <div class="panel p-5 rounded-lg"><p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Sector Micro Risk <span class="text-slate-400 font-semibold">· 15% inverse</span></p><p id="text_risk" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"><div id="bar_risk" class="bg-red-400 h-1.5 rounded-full transition-all duration-500"></div></div></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="panel p-6 rounded-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <div><h3 class="font-extrabold text-slate-900 dark:text-white text-sm">Signal Monitor</h3><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Live evaluation flags</p></div>
+                </div>
+                <div id="alertsBoard" class="space-y-2.5 max-h-72 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="panel p-6 rounded-lg">
+                <div class="mb-4"><h3 class="font-extrabold text-slate-900 dark:text-white text-sm">Stress Testing</h3><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">What-if decision resilience</p></div>
+                <div class="grid grid-cols-1 gap-2 mb-4">
+                    <button onclick="runScenario('traffic_drop')" class="scenario-btn text-left px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/40 dark:bg-transparent">Foot traffic falls 30%</button>
+                    <button onclick="runScenario('growth_reversal')" class="scenario-btn text-left px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/40 dark:bg-transparent">Revenue trend reverses</button>
+                    <button onclick="runScenario('volatility_spike')" class="scenario-btn text-left px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/40 dark:bg-transparent">Cash flow turns volatile</button>
+                    <button onclick="runScenario('double_loan')" class="scenario-btn text-left px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/40 dark:bg-transparent">Loan amount doubles</button>
+                    <button onclick="runScenario('extended_tenure')" class="scenario-btn text-left px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/40 dark:bg-transparent">Tenure extends to 24 months</button>
+                </div>
+                <div id="scenarioResult" class="hidden bg-white/50 dark:bg-slate-950/50 border border-white/60 dark:border-slate-800 rounded-lg p-4 text-xs space-y-2 shadow-sm">
+                    <div class="flex items-center justify-between font-black text-base">
+                        <span id="scn_base" class="text-slate-900 dark:text-white">--</span>
+                        <span class="text-slate-500">→</span>
+                        <span id="scn_stressed">--</span>
+                    </div>
+                    <p id="scn_tier" class="font-bold text-slate-600 dark:text-slate-300">--</p>
+                    <p id="scn_note" class="text-slate-600 dark:text-slate-400 leading-relaxed">--</p>
+                    <p id="scn_verdict" class="font-semibold text-slate-800 dark:text-slate-100 leading-relaxed border-t border-slate-300 dark:border-slate-800 pt-2">--</p>
+                </div>
+            </div>
+
+            <div class="panel p-6 rounded-lg flex flex-col">
+                <div class="flex justify-between items-start mb-4">
+                    <div><h3 class="font-extrabold text-slate-900 dark:text-white text-sm">Credit Memo</h3><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Analyst-grade written assessment</p></div>
+                    <button id="memoBtn" onclick="generateMemo()" class="bg-lendlypurple hover:bg-purple-800 text-white font-bold py-2 px-4 rounded-lg text-[11px] transition-colors whitespace-nowrap shadow-sm">Generate Memo</button>
+                </div>
+                <div id="memoPanel" class="flex-grow bg-white/50 dark:bg-slate-950/50 border border-white/60 dark:border-slate-800 rounded-lg p-4 text-xs leading-relaxed text-slate-700 dark:text-slate-300 overflow-y-auto max-h-72 shadow-inner">
+                    <p class="text-slate-500 italic">Generate a written credit memo for this file — executive summary, signal analysis, risk assessment, recommended terms, and a final decision with confidence level. It reads the live scoring data and whichever map layers you have active.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 panel p-0 overflow-hidden rounded-lg relative">
+                <div class="px-5 py-3.5 border-b border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white/30 dark:bg-black/20">
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-sm">Business Area Analysis: <span id="map_city">--</span></h3>
+                    <p class="text-[11px] font-bold text-slate-600 dark:text-slate-400">Estimated daily pedestrian exposure: <span id="map_pedestrians" class="text-slate-900 dark:text-white">--</span></p>
+                </div>
+                <div id="mapContainer">
+                    <div id="geo-map"></div>
+                    <div class="absolute bottom-4 left-4 z-[999] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/60 dark:border-slate-700 rounded-lg px-4 py-3 shadow-lg text-[10px] font-bold space-y-1.5 text-slate-800 dark:text-slate-200">
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full border-2 border-lendlypurple"></span> Target trade area (2 km radius)</div>
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Foot traffic density</div>
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-white border border-purple-300 text-[7px] flex items-center justify-center"></span> Evaluated business location</div>
+                        <div class="flex items-center gap-2"><span class="text-lendlypurple">◆</span> <span id="legend_demand">-- / 100 local demand index</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                <div class="panel p-5 rounded-lg flex-grow flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">Infrastructure Data Layers</h4>
+                            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Select data layers · keys 1–8</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn_traffic" onclick="toggleMapLayer('traffic')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Foot Traffic</button>
+                            <button id="btn_growth" onclick="toggleMapLayer('growth')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Trajectory</button>
+                            <button id="btn_competitors" onclick="toggleMapLayer('competitors')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Saturation</button>
+                            <button id="btn_flows" onclick="toggleMapLayer('flows')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Transaction</button>
+                            <button id="btn_segments" onclick="toggleMapLayer('segments')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Segments</button>
+                            <button id="btn_voronoi" onclick="toggleMapLayer('voronoi')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Territories</button>
+                            <button id="btn_peers" onclick="toggleMapLayer('peers')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Benchmark</button>
+                            <button id="btn_risk" onclick="toggleMapLayer('risk')" class="panel p-2.5 rounded-lg font-bold text-[10px] transition-colors">Risk Zones</button>
+                        </div>
+                    </div>
+                    <div class="bg-white/50 dark:bg-slate-950/50 p-4 border border-white/60 dark:border-slate-800 rounded-lg space-y-2 mt-4 shadow-sm">
+                        <p class="text-[9px] font-black text-lendlypurple uppercase tracking-wider">Active Automated Evaluation Summary</p>
                         <div class="space-y-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300">
                             <div id="check_traffic" class="flex items-center gap-2 text-orange-500">✓ Foot Traffic Layer Active</div>
                             <div id="check_growth" class="flex items-center gap-2 text-slate-400">○ Growth Trajectory Vector</div>
                             <div id="check_competitors" class="flex items-center gap-2 text-slate-400">○ Competitor Saturation Checked</div>
                             <div id="check_flows" class="flex items-center gap-2 text-slate-400">○ Transaction Value Ingestion Logs</div>
+                            <div id="check_segments" class="flex items-center gap-2 text-slate-400">○ Customer Segment Mix</div>
+                            <div id="check_voronoi" class="flex items-center gap-2 text-slate-400">○ Market Territory Borders</div>
+                            <div id="check_peers" class="flex items-center gap-2 text-slate-400">○ Sector Peer Benchmark</div>
+                            <div id="check_risk" class="flex items-center gap-2 text-slate-400">○ Composite Local Risk</div>
                         </div>
-                        <div class="pt-2 border-t border-white/10 text-xs font-black text-indigo-600 dark:text-indigo-400" id="summary_verdict">
+                        <div class="pt-2 border-t border-slate-300 dark:border-slate-800 text-xs font-black text-lendlypurple dark:text-purple-400" id="summary_verdict">
                             -- repayment probability | APPROVE
                         </div>
                     </div>
@@ -164,162 +376,240 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div id="verdictBorderBox" class="premium-glass p-8 rounded-2xl shadow-xl flex flex-col justify-between lg:col-span-1 border-l-4 border-l-indigo-500">
-                <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="panel p-6 rounded-lg">
+                <h3 class="font-extrabold text-lg mb-5 text-slate-900 dark:text-white border-b border-slate-200/60 dark:border-slate-800 pb-3">EMI Loan Constructor</h3>
+                <div class="space-y-5">
                     <div>
-                        <span class="text-[9px] font-black tracking-wider text-slate-400 uppercase block mb-0.5">Automated Credit Rule Output</span>
-                        <h3 id="frame_tier" class="text-base font-black text-indigo-600 dark:text-indigo-400 leading-tight">--</h3>
-                        <p class="text-xs font-bold text-slate-400 mt-1">Repayment Probability: <span id="frame_prob" class="font-black">--</span></p>
+                        <div class="flex justify-between items-baseline mb-1.5"><label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Loan Amount</label><span class="text-lg font-black text-slate-900 dark:text-white"><span id="curr_sym_1">₹</span><span id="amountDisplay">--</span></span></div>
+                        <input type="range" id="loanAmount" class="w-full accent-lendlypurple" oninput="calculateDynamicEMI()">
                     </div>
-                    <div class="bg-white/30 dark:bg-slate-950/40 border border-white/10 rounded-xl p-4 space-y-2 text-xs font-bold">
-                        <p class="text-[10px] text-slate-400 uppercase tracking-wider">Optimal Loan Terms</p>
-                        <div class="flex justify-between"><span>Amount:</span><span id="frame_amt">--</span></div>
-                        <div class="flex justify-between"><span>Adjusted APR:</span><span>11.5%</span></div>
-                        <div class="flex justify-between"><span>Tenure Length:</span><span>12 months</span></div>
-                        <div class="flex justify-between text-indigo-600 dark:text-indigo-400 border-t border-white/10 pt-1"><span>Monthly EMI:</span><span id="frame_emi">--</span></div>
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-white/5">
-                    <p class="text-[9px] uppercase font-bold text-slate-400 mb-1">Evaluated Asset Target</p>
-                    <div class="flex items-center gap-2"><span id="profile_icon" class="text-lg">🛍️</span> <span id="profile_name" class="font-black text-slate-900 dark:text-white">--</span></div>
-                    <span id="profile_loc" class="text-xs text-slate-400 block mt-0.5">--</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 lg:col-span-2">
-                <div class="premium-glass p-6 rounded-2xl shadow-sm"><p class="text-xs font-bold text-slate-400 mb-1">✓ Payment Velocity</p><p id="text_vel" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200/50 dark:bg-slate-800 h-2 rounded-full overflow-hidden"><div id="bar_vel" class="bg-indigo-500 h-2 rounded-full transition-all duration-500"></div></div></div>
-                <div class="premium-glass p-6 rounded-2xl shadow-sm"><p class="text-xs font-bold text-slate-400 mb-1">✓ Location Demand Vectors</p><p id="text_loc" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200/50 dark:bg-slate-800 h-2 rounded-full overflow-hidden"><div id="bar_loc" class="bg-indigo-500 h-2 rounded-full transition-all duration-500"></div></div></div>
-                <div class="premium-glass p-6 rounded-2xl shadow-sm"><p class="text-xs font-bold text-slate-400 mb-1">✓ Pattern Consistency</p><p id="text_con" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200/50 dark:bg-slate-800 h-2 rounded-full overflow-hidden"><div id="bar_con" class="bg-indigo-500 h-2 rounded-full transition-all duration-500"></div></div></div>
-                <div class="premium-glass p-6 rounded-2xl shadow-sm"><p class="text-xs font-bold text-slate-400 mb-1">✓ Sector Micro Risk</p><p id="text_risk" class="text-2xl font-black text-slate-900 dark:text-white mb-2">--%</p><div class="w-full bg-slate-200/50 dark:bg-slate-800 h-2 rounded-full overflow-hidden"><div id="bar_risk" class="bg-indigo-500 h-2 rounded-full transition-all duration-500"></div></div></div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="premium-glass p-6 rounded-2xl shadow-xl flex flex-col justify-between">
-                <div class="space-y-3">
-                    <div><h3 class="font-black text-slate-900 dark:text-white text-base">REPAYMENT GUARANTEE</h3><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Automated Processing Escrow</p></div>
-                    <div class="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        <div class="text-green-600 dark:text-green-400">✓ Auto-Debit Setup: UPI enabled on 5th of each month</div>
-                        <div>✓ Payment Schedule: <span id="guarantee_emi">--</span> monthly (auto from business UPI)</div>
-                        <div>✓ Fallback Path: Automated retry loops parameters active</div>
-                    </div>
-                </div>
-                <div class="pt-4 flex gap-3">
-                    <button id="btn_setup_debit" onclick="alert('🔒 Auto-Debit Handshake Active.')" class="bg-indigo-600 text-white font-bold py-2.5 px-5 rounded-xl text-xs shadow hover:bg-indigo-700 transition-transform">Setup Auto-Debit</button>
-                    <button onclick="alert('📋 Accessing statement databases...')" class="bg-white/30 border border-white/20 dark:bg-slate-800/40 text-xs font-bold py-2.5 px-4 rounded-xl">View Payment History</button>
-                </div>
-            </div>
-
-            <div class="premium-glass p-8 rounded-2xl shadow-2xl">
-                <h3 class="font-bold text-xl mb-6 text-slate-900 dark:text-white border-b border-white/10 pb-3">EMI Loan Constructor</h3>
-                <div class="space-y-8">
-                    <div>
-                        <label class="block text-sm text-slate-400 mb-2 font-bold uppercase tracking-wider">Loan Capitalization</label>
-                        <input type="range" id="loanAmount" class="w-full accent-indigo-600" oninput="calculateDynamicEMI()">
-                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-2"><span id="curr_sym_1">₹</span> <span id="amountDisplay">--</span></p>
-                    </div>
-                    <div class="flex justify-between items-center bg-white/20 dark:bg-slate-950/40 p-4 rounded-xl border border-white/20">
+                    <div class="grid grid-cols-2 gap-5">
                         <div>
-                            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Estimated Period EMI</p>
-                            <p class="text-3xl font-black text-indigo-600 dark:text-indigo-400"><span id="curr_sym_2">₹</span> <span id="emiResult">--</span></p>
+                            <div class="flex justify-between items-baseline mb-1.5"><label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Tenure</label><span class="text-sm font-black text-slate-900 dark:text-white"><span id="tenureDisplay">12</span> mo</span></div>
+                            <input type="range" id="tenureSlider" min="6" max="36" step="6" value="12" class="w-full accent-lendlypurple" oninput="calculateDynamicEMI()">
                         </div>
-                        <div class="text-right">
-                            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Rate</p>
-                            <p class="text-xl font-black text-slate-900 dark:text-white mb-1">11.5% APR</p>
+                        <div>
+                            <div class="flex justify-between items-baseline mb-1.5"><label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Base APR</label><span class="text-sm font-black text-slate-900 dark:text-white"><span id="aprDisplay">11.5</span>%</span></div>
+                            <input type="range" id="aprSlider" min="8" max="24" step="0.5" value="11.5" class="w-full accent-lendlypurple" oninput="calculateDynamicEMI()">
                         </div>
+                        <div>
+                            <div class="flex justify-between items-baseline mb-1.5"><label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Risk Adjustment</label><span class="text-sm font-black text-slate-900 dark:text-white">+<span id="riskAdjDisplay">0</span>%</span></div>
+                            <input type="range" id="riskAdjSlider" min="0" max="6" step="0.5" value="0" class="w-full accent-lendlypurple" oninput="calculateDynamicEMI()">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-baseline mb-1.5"><label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monthly Revenue Est.</label><span class="text-sm font-black text-slate-900 dark:text-white"><span id="curr_sym_3">₹</span><span id="revenueDisplay">--</span></span></div>
+                            <input type="range" id="revenueSlider" class="w-full accent-lendlypurple" oninput="calculateDynamicEMI()">
+                        </div>
+                    </div>
+                    <div class="bg-white/50 dark:bg-slate-950/50 p-4 rounded-lg border border-white/60 dark:border-slate-800 space-y-3 shadow-inner">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Estimated Period EMI</p>
+                                <p class="text-3xl font-black text-lendlypurple dark:text-purple-400"><span id="curr_sym_2">₹</span> <span id="emiResult">--</span></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-0.5">Effective Rate</p>
+                                <p class="text-lg font-black text-slate-900 dark:text-white"><span id="effRateDisplay">11.5</span>% APR</p>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-300 dark:border-slate-800 pt-2.5">
+                            <p id="affordabilityLine" class="text-xs font-bold text-slate-700 dark:text-slate-200">--</p>
+                            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2"><div id="affordabilityBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div></div>
+                            <p class="text-[10px] text-slate-500 font-semibold mt-1.5">EMI Affordability Ratio — prudential comfort zone is under 30% of monthly cash flow.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-6">
+                <div class="panel p-6 rounded-lg flex flex-col justify-between flex-grow">
+                    <div class="space-y-3">
+                        <div><h3 class="font-extrabold text-slate-900 dark:text-white text-base">Repayment Protection</h3><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Automated Collection & Escrow</p></div>
+                        <div class="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            <div class="text-emerald-600 dark:text-emerald-400">✓ Auto-Debit Setup: UPI e-mandate on the 5th of each month</div>
+                            <div>✓ Payment Schedule: <span id="guarantee_emi">--</span> monthly (auto from business UPI)</div>
+                            <div>✓ Fallback Path: Automated retry with grace-period parameters active</div>
+                        </div>
+                    </div>
+                    <div class="pt-4 flex gap-3">
+                        <button id="btn_setup_debit" onclick="alert('🔒 Auto-Debit Handshake Active.')" class="bg-lendlypurple hover:bg-purple-800 text-white font-bold py-2.5 px-5 rounded-lg text-xs transition-colors shadow-sm">Set Up Auto-Debit</button>
+                        <button onclick="alert('📋 Accessing statement databases...')" class="panel text-xs font-bold py-2.5 px-4 rounded-lg text-slate-700 dark:text-slate-200 hover:text-lendlypurple transition-colors">View Payment History</button>
+                    </div>
+                </div>
+                <div class="panel p-6 rounded-lg">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-3">Verification & Data Rails</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <div class="flex justify-between"><span>UPI transaction stream</span><span class="text-emerald-600 font-bold">Connected · Live</span></div>
+                        <div class="flex justify-between"><span>GST registration</span><span id="rail_gst" class="text-emerald-600 font-bold">Verified</span></div>
+                        <div class="flex justify-between"><span>Bank statement ingestion</span><span id="rail_bank" class="text-amber-600 font-bold">2 of 3 received</span></div>
+                        <div class="flex justify-between"><span>Aadhaar / PAN check</span><span id="rail_kyc" class="text-emerald-600 font-bold">Owner verified</span></div>
+                        <div class="flex justify-between"><span>e-NACH auto-debit</span><span id="rail_nach" class="text-amber-600 font-bold">Mandate pending</span></div>
+                        <div class="flex justify-between"><span>Geospatial mobility feed</span><span class="text-emerald-600 font-bold">Streaming</span></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="premium-glass border-l-8 border-indigo-600 rounded-2xl p-6 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="panel border-l-4 border-l-lendlypurple rounded-lg p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div class="flex-grow">
-                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-1">Risk Recommendation Routing</h2>
-                <p class="text-slate-400 text-xs font-medium">Alternative parameters matched. Select execution sequence path.</p>
+                <h2 class="text-xl font-black text-slate-900 dark:text-white mb-1">Risk Recommendation Routing</h2>
+                <p class="text-slate-600 dark:text-slate-400 text-xs font-medium">Alternative-data parameters matched. Select the execution path for this file.</p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto relative">
-                <button onclick="triggerActionFeedback('data')" class="bg-white/40 border border-white/30 text-slate-700 dark:text-slate-300 font-bold py-3 px-6 rounded-xl text-xs">Request More Data</button>
-                <button id="footer_funding_btn" onclick="alert('🚀 Capital released to core settlement routes.')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl text-xs shadow-lg">Initiate Funding</button>
+                <button onclick="triggerActionFeedback('data')" class="panel text-slate-800 dark:text-slate-300 font-bold py-3 px-6 rounded-lg text-xs hover:text-lendlypurple transition-colors">Request More Data</button>
+                <button id="footer_funding_btn" onclick="alert('🚀 Capital released to core settlement routes.')" class="bg-lendlypurple hover:bg-purple-800 text-white font-bold py-3 px-8 rounded-lg text-xs shadow-md transition-colors">Approve &amp; Fund</button>
             </div>
         </div>
+
+        <footer class="panel rounded-lg p-6 text-xs">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-4">System Footprint & Audit Trail</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 font-semibold text-slate-700 dark:text-slate-300">
+                <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Data Sources</p><p class="leading-snug">UPI streams · Utility records · Telecom recharges · Geospatial mobility · Municipal registries</p></div>
+                <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Model Version</p><p>GeoScore v2.4 · Calibrated confidence</p></div>
+                <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Last Evaluated</p><p id="audit_timestamp">--</p></div>
+                <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Risk Policy Registry</p><p>RP-2026.07</p></div>
+                <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Human-in-the-Loop</p>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="hitlToggle" checked class="accent-lendlypurple w-3.5 h-3.5"><span>Override enabled</span></label>
+                </div>
+                <div><p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Evaluation ID</p><p id="audit_id">--</p></div>
+            </div>
+            <p class="mt-5 pt-4 border-t border-slate-300 dark:border-slate-800 text-[11px] text-slate-500 leading-relaxed">Decision generated using transaction, location, and sector-risk data. Final lending approval subject to lender policy and compliance review.</p>
+        </footer>
     </div>
 
-    <div id="docModal" class="hidden fixed inset-0 bg-black/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-white/10 flex flex-col max-h-[90vh]">
-            <div class="p-5 border-b border-white/10 flex justify-between items-center bg-slate-50 dark:bg-slate-950">
+    <div id="docModal" class="hidden fixed inset-0 bg-slate-900/40 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="panel w-full max-w-3xl rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-white/50 dark:border-slate-800 flex justify-between items-center bg-white/40 dark:bg-slate-950/40">
                 <div>
                     <h3 class="font-black text-xl text-slate-900 dark:text-white">Document Intelligence Analyzer</h3>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Lendly Insights Protocol</p>
+                    <p class="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1">OCR · Cross-Referencing · Fraud Screening</p>
                 </div>
-                <button onclick="document.getElementById('docModal').classList.add('hidden')" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors">✕</button>
+                <button onclick="document.getElementById('docModal').classList.add('hidden')" class="bg-white/50 dark:bg-slate-800 hover:bg-white/80 p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
             </div>
-            
+
             <div class="p-6 overflow-y-auto space-y-6">
-                <div class="border-2 border-dashed border-indigo-400/50 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl p-12 text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors relative">
-                    <svg class="w-12 h-12 text-indigo-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    <p class="font-black text-lg text-slate-700 dark:text-slate-200">Drag files here or click to browse</p>
-                    <p class="text-xs text-slate-400 font-bold mt-2 uppercase tracking-wider">Supported: PDF, JPG, PNG (Max 10MB)</p>
+                <div id="dropZone" class="border-2 border-dashed border-purple-300 dark:border-purple-800 bg-purple-50/40 dark:bg-purple-900/10 rounded-lg p-12 text-center hover:bg-purple-50/60 transition-colors relative">
+                    <svg class="w-12 h-12 text-lendlypurple mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <p class="font-black text-lg text-slate-800 dark:text-slate-200">Drag files here or click to browse</p>
+                    <p class="text-xs text-slate-500 font-bold mt-2 uppercase tracking-wider">Bank statements, GST certificates, ITR forms, leases, utility bills · PDF, CSV, JPG, PNG</p>
                     <input type="file" id="fileUpload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileUpload(event)">
                 </div>
 
                 <div id="uploadStatus" class="hidden text-center p-8">
-                    <div class="inline-block w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p class="text-sm font-black text-indigo-600 tracking-widest uppercase animate-pulse">Running OCR & Fraud Diagnostics...</p>
+                    <div class="inline-block w-8 h-8 border-4 border-lendlypurple border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p class="text-sm font-black text-lendlypurple tracking-widest uppercase animate-pulse">Running OCR &amp; AI Prediction...</p>
                 </div>
-                
+
                 <div id="docResults" class="hidden space-y-6">
                     <div>
-                        <h4 class="font-black text-sm uppercase tracking-widest text-slate-400 mb-3">Verification Report</h4>
-                        <div class="bg-slate-50 dark:bg-slate-950 p-5 rounded-xl border border-white/10 space-y-4 shadow-inner" id="docResultContent"></div>
+                        <h4 class="font-black text-sm uppercase tracking-widest text-slate-500 mb-3">Verification Report</h4>
+                        <div class="bg-white/50 dark:bg-slate-950/50 p-5 rounded-lg border border-white/60 dark:border-slate-800 space-y-4 shadow-sm" id="docResultContent"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <button onclick="toggleWidget()" class="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl z-[9999] transition-transform hover:scale-110 flex items-center justify-center gap-2">
+    <div id="manualModal" class="hidden fixed inset-0 bg-slate-900/40 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="panel w-full max-w-lg rounded-lg shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-white/50 dark:border-slate-800 flex justify-between items-center bg-white/40 dark:bg-slate-950/40">
+                <div>
+                    <h3 class="font-black text-lg text-slate-900 dark:text-white">Manual Data Entry</h3>
+                    <p class="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1">Provisional pre-score</p>
+                </div>
+                <button onclick="document.getElementById('manualModal').classList.add('hidden')" class="bg-white/50 dark:bg-slate-800 hover:bg-white/80 p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
+            </div>
+            <div class="p-6 space-y-4 text-sm">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2"><label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Business Name</label><input id="man_name" type="text" class="w-full bg-white/50 dark:bg-slate-950/50 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-lendlypurple/40" placeholder="e.g. Alisher Electronics Repair"></div>
+                    <div><label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">City</label><input id="man_city" type="text" class="w-full bg-white/50 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-lendlypurple/40" placeholder="Tashkent"></div>
+                    <div><label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Sector</label><input id="man_sector" type="text" class="w-full bg-white/50 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-lendlypurple/40" placeholder="Electronics Repair"></div>
+                    <div><label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Monthly Revenue</label><input id="man_revenue" type="number" class="w-full bg-white/50 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-lendlypurple/40" placeholder="25000"></div>
+                    <div><label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Monthly Transactions</label><input id="man_txns" type="number" class="w-full bg-white/50 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-lendlypurple/40" placeholder="600"></div>
+                </div>
+                <button onclick="runManualPrescore()" class="w-full bg-lendlypurple hover:bg-purple-800 text-white font-bold py-3 rounded-lg text-sm transition-colors shadow-md">Run Provisional Score</button>
+                <div id="manualResult" class="hidden bg-white/50 dark:bg-slate-950/50 border border-white/60 dark:border-slate-800 rounded-lg p-4 text-xs space-y-1.5 shadow-inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="toggleWidget()" class="fixed bottom-6 right-6 bg-lendlypurple hover:bg-purple-800 text-white p-4 rounded-full shadow-lg z-[9999] transition-transform hover:scale-110 flex items-center justify-center gap-2">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
     </button>
-    
-    <div id="aiBox" class="hidden fixed bottom-24 right-6 w-80 sm:w-96 premium-glass rounded-2xl shadow-2xl z-[9999] flex flex-col overflow-hidden border border-white/20 h-[500px]">
-        <div class="bg-indigo-600 text-white p-4 flex justify-between items-center shadow-md z-10">
+
+    <div id="aiBox" class="hidden fixed bottom-24 right-6 w-80 sm:w-[26rem] panel rounded-lg shadow-2xl z-[9999] flex flex-col overflow-hidden h-[540px]">
+        <div class="bg-lendlypurple text-white p-4 flex justify-between items-center z-10">
             <div>
                 <h3 class="font-black text-sm">Lendly Insights AI</h3>
-                <p class="text-[9px] uppercase tracking-wider font-bold text-indigo-200">Context-Aware Assistant</p>
+                <p class="text-[9px] uppercase tracking-wider font-bold text-purple-200">Context-aware underwriting copilot</p>
             </div>
-            <button onclick="toggleWidget()" class="text-white/80 hover:text-white font-bold p-1">✕</button>
-        </div>
-        <div id="msgStream" class="flex-grow p-4 overflow-y-auto flex flex-col bg-white/50 dark:bg-slate-900/80 text-sm space-y-4">
-            <div class="bg-white dark:bg-slate-800 border border-white/20 text-slate-800 dark:text-slate-100 p-3 rounded-xl rounded-tl-sm inline-block max-w-[85%] self-start shadow-sm">
-                <strong>AI:</strong> Hi! I'm Lendly's underwriting assistant. I have all the data for the currently selected business on the dashboard. What would you like to verify?
+            <div class="flex items-center gap-2">
+                <button onclick="generateLiveThesis()" title="Write a live investment thesis from the layers currently active on the map" class="bg-white/15 hover:bg-white/25 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors">Live Thesis</button>
+                <button onclick="toggleWidget()" class="text-white/80 hover:text-white font-bold p-1">✕</button>
             </div>
         </div>
-        <div class="p-3 bg-white/90 dark:bg-slate-950 border-t border-white/20 flex gap-2">
-            <input type="text" id="aiInput" class="flex-grow bg-slate-100 dark:bg-slate-800 border border-white/30 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white placeholder-slate-400" placeholder="Ask about this business..." onkeypress="catchEnter(event)">
-            <button onclick="deliverMsg()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-md">Send</button>
+        <div id="msgStream" class="flex-grow p-4 overflow-y-auto flex flex-col bg-white/40 dark:bg-slate-950 text-sm space-y-3">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 p-3 rounded-lg rounded-tl-sm inline-block max-w-[85%] self-start shadow-sm">
+                <strong>AI:</strong> Hi! I'm Lendly's underwriting assistant. I have the full scoring data for the business on the dashboard — score drivers, risk signals, loan terms, and the geospatial layers. What would you like to verify?
+            </div>
+        </div>
+        <div id="chipRow" class="px-3 pt-2 pb-1 bg-white/60 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-1.5">
+            <button onclick="sendSuggestion('Why did this business get this score?')" class="text-[10px] font-bold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/80 dark:bg-transparent">Why this score?</button>
+            <button onclick="sendSuggestion('What is the biggest risk with this loan?')" class="text-[10px] font-bold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/80 dark:bg-transparent">Biggest risk?</button>
+            <button onclick="sendSuggestion('Justify the recommended loan amount and EMI.')" class="text-[10px] font-bold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/80 dark:bg-transparent">Justify the terms</button>
+            <button onclick="sendSuggestion('What extra documents should I request before approving?')" class="text-[10px] font-bold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full hover:border-lendlypurple hover:text-lendlypurple transition-colors bg-white/80 dark:bg-transparent">What to request?</button>
+        </div>
+        <div class="p-3 bg-white/60 dark:bg-slate-900 flex gap-2">
+            <input type="text" id="aiInput" class="flex-grow bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-lendlypurple/40 text-slate-900 dark:text-white placeholder-slate-400" placeholder="Ask about this business..." onkeypress="catchEnter(event)">
+            <button onclick="deliverMsg()" class="bg-lendlypurple hover:bg-purple-800 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm">Send</button>
         </div>
     </div>
 
     <script>
         let map, baseTile, markerNode, radiusCircle;
         let layerGroupMatrix = {};
-        let activeLayersState = { traffic: true, growth: false, competitors: false, flows: false };
+        let activeLayersState = { traffic: true, growth: false, competitors: false, flows: false, segments: false, voronoi: false, peers: false, risk: false };
         let cachedActiveData = null;
         let auditedHistory = [];
+        let geoIntel = null;
+        let particleState = [];
+        let particleRAF = null;
+        let chatHistory = [];
+        let lastMemo = "";
+
+        const LAYER_KEYS = ['traffic','growth','competitors','flows','segments','voronoi','peers','risk'];
+        const LAYER_LABELS = { traffic:'foot traffic', growth:'growth trajectory', competitors:'competitor saturation', flows:'transaction flows', segments:'customer segments', voronoi:'market territories', peers:'sector peer benchmark', risk:'local risk zones' };
 
         const updateText = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
         const updateStyle = (id, property, value) => { const el = document.getElementById(id); if (el) el.style[property] = value; };
+        const escapeHTML = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const mdLite = (s) => escapeHTML(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+
+        function seededRandom(seedStr) {
+            let h = 1779033703 ^ seedStr.length;
+            for (let i = 0; i < seedStr.length; i++) { h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+            return function() {
+                h = Math.imul(h ^ (h >>> 16), 2246822507);
+                h = Math.imul(h ^ (h >>> 13), 3266489909);
+                h ^= h >>> 16;
+                return (h >>> 0) / 4294967296;
+            };
+        }
 
         window.onload = function() {
             map = L.map('geo-map', { zoomControl: false, scrollWheelZoom: true, doubleClickZoom: false, boxZoom: false, touchZoom: true, dragging: true });
             baseTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
-            layerGroupMatrix.traffic = L.layerGroup().addTo(map);
-            layerGroupMatrix.growth = L.layerGroup().addTo(map);
-            layerGroupMatrix.competitors = L.layerGroup().addTo(map);
-            layerGroupMatrix.flows = L.layerGroup().addTo(map);
+            LAYER_KEYS.forEach(k => { layerGroupMatrix[k] = L.layerGroup().addTo(map); });
+            refreshLayerButtons();
             loadMarketData();
         };
+
+        document.addEventListener('keydown', (e) => {
+            if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+            const idx = parseInt(e.key, 10);
+            if (idx >= 1 && idx <= 8) toggleMapLayer(LAYER_KEYS[idx - 1]);
+        });
 
         function toggleDarkMode() {
             const html = document.documentElement;
@@ -340,181 +630,644 @@
 
         function updateHistorySidebar(name, city, score) {
             const index = auditedHistory.findIndex(item => item.name === name);
-            if(index !== -1) auditedHistory.splice(index, 1);
+            if (index !== -1) auditedHistory.splice(index, 1);
             auditedHistory.unshift({ name, city, score });
-            if(auditedHistory.length > 5) auditedHistory.pop();
+            if (auditedHistory.length > 5) auditedHistory.pop();
 
             const container = document.getElementById('historyContainer');
             if (!container) return;
             container.innerHTML = '';
             auditedHistory.forEach(item => {
                 container.innerHTML += `
-                    <div class="bg-white/40 dark:bg-slate-950 p-3 rounded-xl border border-white/20 flex justify-between items-center hover:scale-[1.02] transition-transform cursor-pointer" onclick="document.getElementById('searchInput').value='${item.name}'; handleSearchQuery(); toggleSidebarDrawer(false);">
-                        <div><p class="font-bold">${item.name}</p><p class="text-[10px] text-slate-400">${item.city}</p></div>
-                        <span class="bg-indigo-500/10 text-indigo-600 text-[10px] font-black px-2 py-1 rounded-md">Score: ${item.score}</span>
+                    <div class="bg-white/50 dark:bg-slate-950/50 p-3 rounded-lg border border-white/60 dark:border-slate-800 flex justify-between items-center hover:border-lendlypurple transition-colors cursor-pointer shadow-sm" onclick="document.getElementById('searchInput').value='${escapeHTML(item.name)}'; handleSearchQuery(); toggleSidebarDrawer(false);">
+                        <div><p class="font-bold">${escapeHTML(item.name)}</p><p class="text-[10px] text-slate-500">${escapeHTML(item.city)}</p></div>
+                        <span class="bg-lendlypurple/10 text-lendlypurple text-[10px] font-black px-2 py-1 rounded">Score: ${item.score}</span>
                     </div>`;
             });
         }
 
         function triggerActionFeedback(type) { alert(`📋 Sequence authorized inside structural network fields.`); }
         function loadMarketData() { applyDataFetch(`/api/market?country=${document.getElementById('countrySelector').value}`); }
-        function catchSearchEnter(e) { if(e.key === 'Enter') handleSearchQuery(); }
+        function catchSearchEnter(e) { if (e.key === 'Enter') handleSearchQuery(); }
         function handleSearchQuery() { applyDataFetch(`/api/search?q=${encodeURIComponent(document.getElementById('searchInput').value.trim())}`); }
 
-        function toggleMapLayer(layerKey) {
-            activeLayersState[layerKey] = !activeLayersState[layerKey];
-            const btn = document.getElementById(`btn_${layerKey}`);
-            if(btn) {
-                if(activeLayersState[layerKey]) {
-                    btn.className = "p-3 rounded-xl border border-white/20 font-bold text-[10px] bg-indigo-600 text-white shadow-sm";
+        function refreshLayerButtons() {
+            LAYER_KEYS.forEach(key => {
+                const btn = document.getElementById(`btn_${key}`);
+                if (!btn) return;
+                if (activeLayersState[key]) {
+                    btn.className = "panel p-2.5 rounded-lg font-bold text-[10px] bg-lendlypurple text-white transition-colors border-lendlypurple";
                 } else {
-                    btn.className = "p-3 rounded-xl border border-white/20 font-bold text-[10px] bg-white/40 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200 shadow-sm";
-                }
-            }
-            renderVisualOverlays();
-        }
-
-        function renderVisualOverlays() {
-            if(!cachedActiveData || !cachedActiveData.layers) return;
-            Object.keys(layerGroupMatrix).forEach(key => layerGroupMatrix[key].clearLayers());
-
-            const checkT = document.getElementById('check_traffic');
-            if(activeLayersState.traffic && cachedActiveData.layers.traffic) {
-                if (checkT) { checkT.className = "flex items-center gap-2 text-orange-500 font-bold"; checkT.innerText = "✓ Foot Traffic Layer Active (8,500 Pedestrians)"; }
-                cachedActiveData.layers.traffic.forEach(pt => { L.circle([pt[0], pt[1]], { color: 'none', fillColor: '#f97316', fillOpacity: 0.55, radius: 180 }).addTo(layerGroupMatrix.traffic); });
-            } else if (checkT) { checkT.className = "flex items-center gap-2 text-slate-400"; checkT.innerText = "○ Foot Traffic Inactive"; }
-
-            if(activeLayersState.growth && cachedActiveData.layers.growth) {
-                cachedActiveData.layers.growth.forEach(pt => {
-                    const arrowIcon = L.divIcon({ html: `<div class="bg-blue-600 text-white px-2 py-0.5 rounded font-black text-[9px] shadow-md">⬆️ +${pt[2]}% YoY</div>` });
-                    L.marker([pt[0], pt[1]], {icon: arrowIcon}).addTo(layerGroupMatrix.growth);
-                });
-            }
-            
-            if(activeLayersState.competitors && cachedActiveData.layers.competitors) {
-                cachedActiveData.layers.competitors.forEach(pt => {
-                    const compIcon = L.divIcon({ html: `<div class="bg-red-500 text-white font-bold p-1 rounded border border-white text-[9px] shadow-xl whitespace-nowrap">${pt[2]}</div>` });
-                    L.marker([pt[0], pt[1]], {icon: compIcon}).addTo(layerGroupMatrix.competitors);
-                });
-            }
-
-            if(activeLayersState.flows && cachedActiveData.layers.flows) {
-                cachedActiveData.layers.flows.forEach(pt => { L.circle([pt[0], pt[1]], { color: 'none', fillColor: '#16a34a', fillOpacity: 0.50, radius: 280 }).addTo(layerGroupMatrix.flows); });
-            }
-            document.getElementById('summary_verdict').innerText = `${cachedActiveData.probability} repayment probability | APPROVE ${cachedActiveData.currency}${Number(cachedActiveData.loan_config.default_amt).toLocaleString()}`;
-        }
-
-        function applyDataFetch(endpoint) {
-            fetch(endpoint).then(res => res.json()).then(data => {
-                cachedActiveData = data;
-                
-                updateText('card_rating', data.ai_rating);
-                updateText('card_grade', data.geo_grade);
-                updateText('card_volatility', data.cash_flow_volatility);
-                updateText('card_speed', data.eval_speed);
-                updateText('profile_name', data.business_name);
-                updateText('profile_loc', `${data.city} • ${data.sector}`);
-                updateText('profile_icon', data.icon);
-                
-                const isDeclined = data.tier.includes("NOT APPROVED");
-                const borderBox = document.getElementById('verdictBorderBox');
-                if (isDeclined) {
-                    if (borderBox) borderBox.className = "premium-glass p-8 rounded-2xl shadow-xl flex flex-col justify-between lg:col-span-1 border-l-4 border-l-red-500";
-                } else {
-                    if (borderBox) borderBox.className = "premium-glass p-8 rounded-2xl shadow-xl flex flex-col justify-between lg:col-span-1 border-l-4 border-l-indigo-500";
-                }
-                
-                updateText('text_vel', data.metrics.payment_velocity + '%'); updateStyle('bar_vel', 'width', data.metrics.payment_velocity + '%');
-                updateText('text_loc', data.metrics.location_demand + '%'); updateStyle('bar_loc', 'width', data.metrics.location_demand + '%');
-                updateText('text_con', data.metrics.transaction_consistency + '%'); updateStyle('bar_con', 'width', data.metrics.transaction_consistency + '%');
-                updateText('text_risk', data.metrics.business_risk + '%'); updateStyle('bar_risk', 'width', data.metrics.business_risk + '%');
-
-                updateText('curr_sym_1', data.currency); updateText('curr_sym_2', data.currency);
-                
-                const slider = document.getElementById('loanAmount');
-                if (slider) { slider.min = data.loan_config.min; slider.max = data.loan_config.max; slider.step = data.loan_config.step; slider.value = data.loan_config.default_amt; }
-
-                updateText('amountDisplay', Number(data.loan_config.default_amt).toLocaleString());
-                updateText('emiResult', Number(data.loan_config.default_emi).toLocaleString());
-                updateText('frame_tier', `RECOMMENDATION: ${data.tier}`);
-                updateText('frame_prob', data.probability);
-                updateText('frame_amt', `${data.currency}${Number(data.loan_config.default_amt).toLocaleString()}`);
-                updateText('frame_emi', `${data.currency}${Number(data.loan_config.default_emi).toLocaleString()}`);
-                updateText('guarantee_emi', `${data.currency}${Number(data.loan_config.default_emi).toLocaleString()}`);
-
-                if (map) {
-                    map.setView(data.coords, 14);
-                    if(markerNode) map.removeLayer(markerNode);
-                    if(radiusCircle) map.removeLayer(radiusCircle);
-
-                    const customPin = L.divIcon({
-                        className: '',
-                        html: `<div class="relative flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-700 to-indigo-600 rounded-full text-white font-black shadow-2xl border-2 border-white hero-pulse-ring transition-transform duration-300 hover:scale-110"><span class="text-xl">${data.icon}</span><div class="absolute -bottom-2 -right-2 bg-white text-purple-900 border border-purple-200 font-extrabold text-[10px] w-6 h-6 rounded-full flex items-center justify-center shadow-md">${data.score}</div></div>`
-                    });
-                    markerNode = L.marker(data.coords, {icon: customPin}).addTo(map);
-                    radiusCircle = L.circle(data.coords, { color: '#6B46C1', weight: 2, dashArray: '6, 6', fillColor: '#6B46C1', fillOpacity: 0.08, radius: 2000 }).addTo(map);
-                    renderVisualOverlays();
-                    updateHistorySidebar(data.business_name, data.city, data.score);
-                    setTimeout(() => { map.invalidateSize(); }, 200);
+                    btn.className = "panel p-2.5 rounded-lg font-bold text-[10px] text-slate-700 dark:text-slate-200 hover:border-lendlypurple hover:text-lendlypurple transition-colors";
                 }
             });
         }
 
+        function toggleMapLayer(layerKey) {
+            activeLayersState[layerKey] = !activeLayersState[layerKey];
+            refreshLayerButtons();
+            renderVisualOverlays();
+        }
+
+        function deriveGeoIntel(data) {
+            const [lat, lng] = data.coords;
+            const rnd = seededRandom(data.business_name + data.city);
+            const m = data.metrics;
+            const mLat = 1 / 111320;
+            const mLng = 1 / (111320 * Math.cos(lat * Math.PI / 180));
+            const off = (meters, ang) => [lat + Math.sin(ang) * meters * mLat, lng + Math.cos(ang) * meters * mLng];
+
+            const segmentPool = ['Office workers', 'Students', 'Residents', 'Tourists', 'Transit commuters'];
+            let weights = segmentPool.map(() => rnd() + 0.25);
+            const wSum = weights.reduce((a, b) => a + b, 0);
+            let segments = segmentPool.map((name, i) => ({ name, pct: Math.round(weights[i] / wSum * 100), reach: Math.round(700 + rnd() * 1200) }))
+                .sort((a, b) => b.pct - a.pct).slice(0, 4);
+            const segTotal = segments.reduce((a, s) => a + s.pct, 0);
+            segments[0].pct += 100 - segTotal;
+
+            const particles = [];
+            const pCount = Math.round(18 + m.location_demand / 100 * 26);
+            for (let i = 0; i < pCount; i++) {
+                const hours = ['6a','9a','12p','3p','6p','9p'].map(h => ({ h, v: rnd() }));
+                const peak = hours.reduce((a, b) => b.v > a.v ? b : a);
+                particles.push({
+                    ang: rnd() * Math.PI * 2,
+                    dist: 130 + rnd() * 1350,
+                    speed: 0.15 + rnd() * 0.5,
+                    phase: rnd() * Math.PI * 2,
+                    intensity: 0.35 + rnd() * 0.65,
+                    peak: peak.h,
+                    hours,
+                    delta: Math.round((rnd() - 0.35) * 40)
+                });
+            }
+
+            const target = data.score;
+            const start = Math.max(8, target - 8 - rnd() * 16);
+            const traj = [];
+            for (let i = 0; i < 12; i++) {
+                const base = start + (target - start) * (i / 11);
+                traj.push(Math.round(base + (rnd() - 0.5) * 7));
+            }
+            const dipIdx = 3 + Math.floor(rnd() * 3);
+            traj[dipIdx] = Math.max(5, traj[dipIdx] - 9);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const recovery = Math.max(4, Math.round((traj[dipIdx + 2] - traj[dipIdx]) / Math.max(1, traj[dipIdx]) * 100));
+            const annotations = [
+                { idx: dipIdx, text: `${months[dipIdx]} seasonal dip` },
+                { idx: Math.min(11, dipIdx + 3), text: `+${recovery}% MoM recovery` }
+            ];
+
+            const compNames = ['Corner Mart', 'Metro Stall', 'City Traders', 'Local Depot', 'Bazaar Point'];
+            const competitors = (data.layers.competitors || []).map(c => ({ pos: [c[0], c[1]], label: c[2], footfall: Math.round(800 + rnd() * 4200) }));
+            while (competitors.length < 4) {
+                const a = rnd() * Math.PI * 2, d = 500 + rnd() * 1500;
+                competitors.push({ pos: off(d, a), label: '🏪 ' + compNames[competitors.length % compNames.length], footfall: Math.round(600 + rnd() * 3800) });
+            }
+
+            const flows = [];
+            for (let i = 0; i < 4; i++) {
+                const a = rnd() * Math.PI * 2;
+                flows.push({ from: off(600 + rnd() * 1200, a), to: [lat, lng], kind: 'in', size: Math.round(120 + rnd() * 620) });
+            }
+            for (let i = 0; i < 3; i++) {
+                const a = rnd() * Math.PI * 2;
+                flows.push({ from: [lat, lng], to: off(700 + rnd() * 1300, a), kind: 'out', size: Math.round(80 + rnd() * 380) });
+            }
+
+            const peers = [];
+            for (let i = 0; i < 12; i++) {
+                const a = rnd() * Math.PI * 2, d = 700 + rnd() * 2400;
+                peers.push({ pos: off(d, a), score: Math.max(8, Math.min(97, Math.round(data.score + (rnd() - 0.5) * 46))), footfall: Math.round(500 + rnd() * 5000) });
+            }
+            const sorted = [...peers.map(p => p.score), data.score].sort((a, b) => b - a);
+            const rank = sorted.indexOf(data.score) + 1;
+
+            const zoneTypes = [
+                { name: 'Municipal construction', color: '#f59e0b' },
+                { name: 'Traffic congestion corridor', color: '#fb923c' },
+                { name: 'Seasonal flood boundary', color: '#ef4444' }
+            ];
+            const riskZones = zoneTypes.map((z, i) => {
+                const a = rnd() * Math.PI * 2, d = 800 + rnd() * 1300, r = 260 + rnd() * 320;
+                const center = off(d, a);
+                const poly = [];
+                for (let k = 0; k < 6; k++) {
+                    const ka = k / 6 * Math.PI * 2;
+                    poly.push([center[0] + Math.sin(ka) * r * mLat, center[1] + Math.cos(ka) * r * mLng]);
+                }
+                return { ...z, poly, score: Math.round(Math.min(9.5, Math.max(1.5, m.business_risk / 10 + (rnd() - 0.3) * 3)) * 10) / 10 };
+            });
+
+            return { off, mLat, mLng, segments, particles, traj, annotations, competitors, flows, peers, rank, riskZones,
+                     pedestrians: m.location_demand * 100 };
+        }
+
+        function stopParticles() { if (particleRAF) { cancelAnimationFrame(particleRAF); particleRAF = null; } particleState = []; }
+
+        function startParticles() {
+            if (!geoIntel || !cachedActiveData) return;
+            const [lat, lng] = cachedActiveData.coords;
+            particleState = geoIntel.particles.map(p => {
+                const color = p.intensity > 0.75 ? '#ea580c' : (p.intensity > 0.5 ? '#f97316' : '#fdba74');
+                const mk = L.circleMarker([lat, lng], { radius: 3 + p.intensity * 3.5, color: 'none', fillColor: color, fillOpacity: 0.75 });
+                const bars = p.hours.map(h => `${h.h} ${'▁▃▅▇'[Math.min(3, Math.floor(h.v * 4))]}`).join('  ');
+                const vs = p.delta >= 0 ? `+${p.delta}%` : `${p.delta}%`;
+                mk.bindTooltip(`<div>Hourly intensity — peak ${p.peak}</div><div style="letter-spacing:1px;margin-top:2px">${bars}</div><div style="margin-top:2px;color:#a5b4fc">${vs} vs local market benchmark</div>`, { className: 'geo-tip', direction: 'top' });
+                mk.addTo(layerGroupMatrix.traffic);
+                return { mk, ...p };
+            });
+            let last = 0;
+            const step = (t) => {
+                if (t - last > 40) {
+                    last = t;
+                    const time = t / 1000;
+                    particleState.forEach(p => {
+                        const wobble = Math.sin(time * p.speed * 2 + p.phase) * 70;
+                        const a = p.ang + time * p.speed * 0.12;
+                        const d = p.dist + wobble;
+                        p.mk.setLatLng([lat + Math.sin(a) * d * geoIntel.mLat, lng + Math.cos(a) * d * geoIntel.mLng]);
+                    });
+                }
+                particleRAF = requestAnimationFrame(step);
+            };
+            particleRAF = requestAnimationFrame(step);
+        }
+
+        function setCheck(id, active, activeText, inactiveText, colorClass) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (active) { el.className = `flex items-center gap-2 ${colorClass} font-bold`; el.innerText = `✓ ${activeText}`; }
+            else { el.className = "flex items-center gap-2 text-slate-500"; el.innerText = `○ ${inactiveText}`; }
+        }
+
+        function renderVisualOverlays() {
+            if (!cachedActiveData || !geoIntel) return;
+            Object.keys(layerGroupMatrix).forEach(key => layerGroupMatrix[key].clearLayers());
+            stopParticles();
+            const data = cachedActiveData;
+            const [lat, lng] = data.coords;
+
+            if (activeLayersState.traffic) {
+                (data.layers.traffic || []).forEach(pt => { L.circle([pt[0], pt[1]], { color: 'none', fillColor: '#f97316', fillOpacity: 0.35, radius: 180 }).addTo(layerGroupMatrix.traffic); });
+                startParticles();
+            }
+            setCheck('check_traffic', activeLayersState.traffic, `Foot Traffic Layer Active (${geoIntel.pedestrians.toLocaleString()} Pedestrians)`, 'Foot Traffic Inactive', 'text-orange-500');
+
+            if (activeLayersState.growth) {
+                const span = 1900, startD = -950;
+                const pts = geoIntel.traj.map((v, i) => {
+                    const x = startD + (i / 11) * span;
+                    const y = 550 + (v / 100) * 900;
+                    return [lat + y * geoIntel.mLat, lng + x * geoIntel.mLng];
+                });
+                const bandUp = pts.map(p => [p[0] + 120 * geoIntel.mLat, p[1]]);
+                const bandDn = pts.map(p => [p[0] - 120 * geoIntel.mLat, p[1]]).reverse();
+                L.polygon([...bandUp, ...bandDn], { color: 'none', fillColor: '#3b82f6', fillOpacity: 0.10 }).addTo(layerGroupMatrix.growth);
+                L.polyline(pts, { color: '#2563eb', weight: 3, opacity: 0.9 }).addTo(layerGroupMatrix.growth)
+                    .bindTooltip('12-month performance trajectory with confidence band', { className: 'geo-tip', sticky: true });
+                geoIntel.annotations.forEach(an => {
+                    const icon = L.divIcon({ className: '', html: `<div class="bg-blue-600 text-white px-2 py-0.5 rounded font-black text-[9px] shadow-md whitespace-nowrap">${an.text}</div>` });
+                    L.marker(pts[an.idx], { icon }).addTo(layerGroupMatrix.growth);
+                });
+                (data.layers.growth || []).forEach(pt => {
+                    const arrowIcon = L.divIcon({ className: '', html: `<div class="bg-blue-600 text-white px-2 py-0.5 rounded font-black text-[9px] shadow-md">⬆️ +${pt[2]}% YoY</div>` });
+                    L.marker([pt[0], pt[1]], { icon: arrowIcon }).addTo(layerGroupMatrix.growth);
+                });
+            }
+            setCheck('check_growth', activeLayersState.growth, 'Growth Trajectory Vector Plotted (12 mo)', 'Growth Trajectory Vector', 'text-blue-500');
+
+            if (activeLayersState.competitors) {
+                geoIntel.competitors.forEach(c => {
+                    const scale = 0.8 + c.footfall / 5000;
+                    const compIcon = L.divIcon({ className: '', html: `<div style="transform:scale(${scale.toFixed(2)})" class="bg-red-500 text-white font-bold p-1 rounded border border-white text-[9px] shadow-xl whitespace-nowrap">${c.label}</div>` });
+                    L.marker(c.pos, { icon: compIcon }).addTo(layerGroupMatrix.competitors)
+                        .bindTooltip(`~${c.footfall.toLocaleString()} weekly footfall`, { className: 'geo-tip', direction: 'top' });
+                });
+            }
+            setCheck('check_competitors', activeLayersState.competitors, `Competitor Saturation Checked (${geoIntel.competitors.length} in radius)`, 'Competitor Saturation Checked', 'text-red-500');
+
+            if (activeLayersState.flows) {
+                (data.layers.flows || []).forEach(pt => { L.circle([pt[0], pt[1]], { color: 'none', fillColor: '#16a34a', fillOpacity: 0.30, radius: 280 }).addTo(layerGroupMatrix.flows); });
+                geoIntel.flows.forEach(f => {
+                    const midLat = (f.from[0] + f.to[0]) / 2 + 240 * geoIntel.mLat;
+                    const midLng = (f.from[1] + f.to[1]) / 2;
+                    const curve = [];
+                    for (let s = 0; s <= 12; s++) {
+                        const u = s / 12;
+                        curve.push([
+                            (1-u)*(1-u)*f.from[0] + 2*(1-u)*u*midLat + u*u*f.to[0],
+                            (1-u)*(1-u)*f.from[1] + 2*(1-u)*u*midLng + u*u*f.to[1]
+                        ]);
+                    }
+                    L.polyline(curve, { className: 'flowline', color: f.kind === 'in' ? '#2563eb' : '#ef4444', weight: 2 + f.size / 160, opacity: 0.85 })
+                        .addTo(layerGroupMatrix.flows)
+                        .bindTooltip(`${f.kind === 'in' ? 'Customer revenue stream' : 'Supplier expense stream'} · relative size ${f.size}`, { className: 'geo-tip', sticky: true });
+                });
+            }
+            setCheck('check_flows', activeLayersState.flows, 'Transaction Value Streams Live', 'Transaction Value Ingestion Logs', 'text-green-600');
+
+            if (activeLayersState.segments) {
+                let angle = -Math.PI / 2;
+                const segColors = ['#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe'];
+                geoIntel.segments.forEach((seg, i) => {
+                    const sweep = seg.pct / 100 * Math.PI * 2;
+                    const poly = [[lat, lng]];
+                    for (let s = 0; s <= 16; s++) {
+                        const a = angle + sweep * (s / 16);
+                        poly.push([lat + Math.sin(a) * 2000 * geoIntel.mLat, lng + Math.cos(a) * 2000 * geoIntel.mLng]);
+                    }
+                    angle += sweep;
+                    L.polygon(poly, { color: '#7c3aed', weight: 1, opacity: 0.35, fillColor: segColors[i % 4], fillOpacity: 0.16 })
+                        .addTo(layerGroupMatrix.segments)
+                        .bindTooltip(`${seg.name}: ${seg.pct}% of trade area · reach ~${seg.reach}m`, { className: 'geo-tip', sticky: true });
+                });
+            }
+            setCheck('check_segments', activeLayersState.segments, `Customer Segment Mix Mapped (${geoIntel.segments[0].name} ${geoIntel.segments[0].pct}%)`, 'Customer Segment Mix', 'text-violet-500');
+
+            if (activeLayersState.voronoi && window.d3 && d3.Delaunay) {
+                const sites = [[lng, lat], ...geoIntel.competitors.map(c => [c.pos[1], c.pos[0]])];
+                const delaunay = d3.Delaunay.from(sites);
+                const pad = 0.022;
+                const vor = delaunay.voronoi([lng - pad, lat - pad, lng + pad, lat + pad]);
+                sites.forEach((s, i) => {
+                    const cell = vor.cellPolygon(i);
+                    if (!cell) return;
+                    const latlngs = cell.map(p => [p[1], p[0]]);
+                    const mine = i === 0;
+                    L.polygon(latlngs, { color: '#64748b', weight: 1.5, dashArray: '4,5', fillColor: mine ? '#7c3aed' : '#ef4444', fillOpacity: mine ? 0.10 : 0.05 })
+                        .addTo(layerGroupMatrix.voronoi)
+                        .bindTooltip(mine ? `${data.business_name} — home territory: customers here are closest to this merchant` : `Contested pool — closer to ${geoIntel.competitors[i-1].label}`, { className: 'geo-tip', sticky: true });
+                });
+            }
+            setCheck('check_voronoi', activeLayersState.voronoi, 'Market Territory Borders Drawn', 'Market Territory Borders', 'text-slate-500');
+
+            if (activeLayersState.peers) {
+                const scores = geoIntel.peers.map(p => p.score).sort((a, b) => b - a);
+                const topCut = scores[Math.max(0, Math.floor(scores.length * 0.1))];
+                const botCut = scores[Math.min(scores.length - 1, Math.floor(scores.length * 0.9))];
+                geoIntel.peers.forEach(p => {
+                    const cls = p.score >= topCut ? 'peer-top' : (p.score <= botCut ? 'peer-bottom' : '');
+                    const col = p.score >= topCut ? '#10b981' : (p.score <= botCut ? '#ef4444' : '#94a3b8');
+                    L.circleMarker(p.pos, { radius: 4 + p.footfall / 1500, color: '#fff', weight: 1, fillColor: col, fillOpacity: 0.5, className: cls })
+                        .addTo(layerGroupMatrix.peers)
+                        .bindTooltip(`Sector peer · score ${p.score}/100 · ~${p.footfall.toLocaleString()} weekly footfall`, { className: 'geo-tip', direction: 'top' });
+                });
+            }
+            setCheck('check_peers', activeLayersState.peers, `Sector Benchmark: Ranked #${geoIntel.rank} of ${geoIntel.peers.length + 1} local peers`, 'Sector Peer Benchmark', 'text-emerald-600');
+
+            if (activeLayersState.risk) {
+                geoIntel.riskZones.forEach(z => {
+                    L.polygon(z.poly, { color: z.color, weight: 1.5, fillColor: z.color, fillOpacity: 0.14 })
+                        .addTo(layerGroupMatrix.risk)
+                        .bindTooltip(`${z.name} · composite local risk ${z.score}/10`, { className: 'geo-tip', sticky: true });
+                });
+            }
+            const avgRisk = geoIntel.riskZones.reduce((a, z) => a + z.score, 0) / geoIntel.riskZones.length;
+            setCheck('check_risk', activeLayersState.risk, `Composite Local Risk Mapped (avg ${avgRisk.toFixed(1)}/10)`, 'Composite Local Risk', 'text-amber-600');
+
+            const isDeclined = data.tier.includes("NOT APPROVED");
+            document.getElementById('summary_verdict').innerText = isDeclined
+                ? `${data.probability} repayment probability | DECLINE`
+                : `${data.probability} repayment probability | APPROVE ${data.currency}${Number(data.loan_config.default_amt).toLocaleString()}`;
+        }
+
+        const SKELETON_IDS = ['card_rating','card_grade','card_volatility','card_speed','profile_name','frame_tier','frame_amt','frame_emi','meta_revenue','meta_age'];
+        function setSkeletons(on) { SKELETON_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle('skl', on); }); }
+
+        function applyDataFetch(endpoint) {
+            setSkeletons(true);
+            fetch(endpoint).then(res => res.json()).then(data => {
+                populateDashboard(data);
+            }).catch(() => setSkeletons(false));
+        }
+
+        // Extracted so uploads can directly trigger a dashboard rewrite
+        function populateDashboard(data) {
+            cachedActiveData = data;
+            geoIntel = deriveGeoIntel(data);
+            setSkeletons(false);
+            
+            // Sync the dropdown so it respects the newly active country profile
+            if (data.country) {
+                const dropdown = document.getElementById('countrySelector');
+                let optionExists = Array.from(dropdown.options).some(opt => opt.value === data.country || opt.text === data.country);
+                if (optionExists && dropdown.value !== data.country) {
+                    dropdown.value = data.country;
+                }
+            }
+
+            updateText('card_rating', data.ai_rating);
+            updateText('card_grade', data.geo_grade);
+            updateText('card_volatility', data.cash_flow_volatility);
+            updateText('card_speed', data.eval_speed);
+            updateText('profile_name', data.business_name);
+            updateText('profile_loc', `${data.city} • ${data.sector}`);
+            updateText('profile_icon', data.icon);
+
+            const isDeclined = data.tier.includes("NOT APPROVED");
+            const m = data.metrics;
+
+            updateText('sub_rating', isDeclined
+                ? `High default risk compared to similar businesses in the ${data.city} ${data.sector.toLowerCase()} sector.`
+                : `Low default risk compared to similar businesses in the ${data.city} ${data.sector.toLowerCase()} sector.`);
+            updateText('sub_grade', m.location_demand >= 70
+                ? 'High foot traffic, dense commercial zone, low competitor pressure.'
+                : 'Thin foot traffic and demand vectors — location weakens the file.');
+            const vol = parseFloat(data.cash_flow_volatility);
+            updateText('sub_volatility', vol < 10 ? 'Highly predictable month-to-month revenue.' : (vol < 20 ? 'Moderate revenue swings — within lendable range.' : 'Severe revenue swings undermine fixed repayment schedules.'));
+
+            const borderBox = document.getElementById('verdictBorderBox');
+            if (borderBox) {
+                borderBox.style.borderLeftColor = isDeclined ? "#ef4444" : "#8b5cf6";
+            }
+
+            updateText('text_vel', m.payment_velocity + '%'); updateStyle('bar_vel', 'width', m.payment_velocity + '%');
+            updateText('text_loc', m.location_demand + '%'); updateStyle('bar_loc', 'width', m.location_demand + '%');
+            updateText('text_con', m.transaction_consistency + '%'); updateStyle('bar_con', 'width', m.transaction_consistency + '%');
+            updateText('text_risk', m.business_risk + '%'); updateStyle('bar_risk', 'width', m.business_risk + '%');
+
+            updateText('curr_sym_1', data.currency); updateText('curr_sym_2', data.currency); updateText('curr_sym_3', data.currency);
+
+            const slider = document.getElementById('loanAmount');
+            if (slider) { slider.min = data.loan_config.min; slider.max = data.loan_config.max; slider.step = data.loan_config.step || 1; slider.value = data.loan_config.default_amt; }
+            const tSl = document.getElementById('tenureSlider'); if (tSl) tSl.value = 12;
+            const aSl = document.getElementById('aprSlider'); if (aSl) aSl.value = 11.5;
+            const rSl = document.getElementById('riskAdjSlider'); if (rSl) rSl.value = 0;
+
+            updateText('amountDisplay', Number(data.loan_config.default_amt).toLocaleString());
+            updateText('emiResult', Number(data.loan_config.default_emi).toLocaleString());
+            updateText('frame_tier', `RECOMMENDATION: ${data.tier}`);
+            updateText('frame_prob', data.probability);
+            updateText('frame_amt', `${data.currency}${Number(data.loan_config.default_amt).toLocaleString()}`);
+            updateText('frame_emi', `${data.currency}${Number(data.loan_config.default_emi).toLocaleString()}`);
+            updateText('guarantee_emi', `${data.currency}${Number(data.loan_config.default_emi).toLocaleString()}`);
+
+            if (data.profile) {
+                const p = data.profile;
+                updateText('meta_age', p.business_age);
+                updateText('meta_revenue', `${data.currency}${Number(p.monthly_revenue).toLocaleString()}`);
+                updateText('meta_txns', Number(p.monthly_txn_volume).toLocaleString());
+                updateText('meta_daily', `${data.currency}${Number(p.avg_daily_sales).toLocaleString()}`);
+                updateText('meta_history', p.repayment_history);
+                updateText('meta_evaluated', data.evaluated_at || '--');
+                const ov = document.getElementById('owner_verified');
+                if (ov) {
+                    ov.innerText = p.owner_verified ? 'Verified · KYC complete' : 'Unverified';
+                    ov.className = p.owner_verified
+                        ? "text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 border border-emerald-200/50 dark:border-emerald-800 px-2 py-1 rounded inline-block"
+                        : "text-xs font-bold text-red-600 bg-red-100/50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800 px-2 py-1 rounded inline-block";
+                }
+                const docsEl = document.getElementById('docsChecklist');
+                if (docsEl) {
+                    const docLabels = { bank_statements: 'Bank statements', registration_certificate: 'Registration certificate', utility_bill: 'Utility bill', lease_agreement: 'Lease agreement' };
+                    docsEl.innerHTML = Object.entries(p.documents).map(([k, v]) => v
+                        ? `<span class="text-emerald-700 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-2 py-1 rounded">✓ ${docLabels[k]}</span>`
+                        : `<span class="text-slate-500 bg-slate-50/50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded">○ ${docLabels[k]} missing</span>`).join('');
+                }
+                const revSl = document.getElementById('revenueSlider');
+                if (revSl) {
+                    revSl.min = Math.round(p.monthly_revenue * 0.3);
+                    revSl.max = Math.round(p.monthly_revenue * 3);
+                    revSl.step = Math.max(1, Math.round(p.monthly_revenue / 50));
+                    revSl.value = p.monthly_revenue;
+                }
+                const railBank = document.getElementById('rail_bank');
+                if (railBank) { railBank.innerText = p.documents.bank_statements ? '3 of 3 received' : '1 of 3 received'; railBank.className = p.documents.bank_statements ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'; }
+                const railKyc = document.getElementById('rail_kyc');
+                if (railKyc) { railKyc.innerText = p.owner_verified ? 'Owner verified' : 'Verification pending'; railKyc.className = p.owner_verified ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'; }
+                const railGst = document.getElementById('rail_gst');
+                if (railGst) { railGst.innerText = p.documents.registration_certificate ? 'Verified' : 'Not on file'; railGst.className = p.documents.registration_certificate ? 'text-emerald-600 font-bold' : 'text-red-500 font-bold'; }
+                const railNach = document.getElementById('rail_nach');
+                if (railNach) { railNach.innerText = isDeclined ? 'Not applicable' : 'Mandate pending'; }
+            }
+
+            const pos = [], risk = [];
+            if (m.payment_velocity >= 75) pos.push(`Strong payment velocity (${m.payment_velocity}%)`); else risk.push(`Weak payment velocity (${m.payment_velocity}%)`);
+            if (m.location_demand >= 70) pos.push(`High location demand (${m.location_demand}%)`); else risk.push(`Soft location demand (${m.location_demand}%)`);
+            if (m.transaction_consistency >= 70) pos.push(`Consistent transaction pattern (${m.transaction_consistency}%)`); else risk.push(`Irregular transaction pattern (${m.transaction_consistency}%)`);
+            if (m.location_demand >= 80) pos.push('High local foot traffic density');
+            risk.push(`Sector micro-risk (${m.business_risk}%)`);
+            risk.push(`Cash-flow volatility (${data.cash_flow_volatility})`);
+            if (data.profile && !data.profile.documents.bank_statements) risk.push('Limited uploaded documentation');
+            document.getElementById('drivers_positive').innerHTML = pos.length ? pos.map(d => `<li class="flex gap-2"><span class="text-emerald-500">▲</span>${d}</li>`).join('') : '<li class="text-slate-400 italic">No positive drivers above threshold.</li>';
+            document.getElementById('drivers_risk').innerHTML = risk.map(d => `<li class="flex gap-2"><span class="text-red-400">▼</span>${d}</li>`).join('');
+
+            const conf = data.score >= 75 || data.score < 35 ? 'High' : 'Moderate';
+            updateText('decision_footer', isDeclined
+                ? `Final Recommendation: Decline | Confidence: ${conf} | Suggested review: re-evaluate after two quarters of improved signals.`
+                : `Final Recommendation: Approve ${data.currency}${Number(data.loan_config.default_amt).toLocaleString()} | Confidence: ${conf} | Suggested review: auto-approve unless missing documents.`);
+            const fundBtn = document.getElementById('footer_funding_btn');
+            if (fundBtn) fundBtn.innerText = isDeclined ? 'Funding Blocked' : `Approve & Fund ${data.currency}${Number(data.loan_config.default_amt).toLocaleString()}`;
+
+            updateText('map_city', data.city);
+            updateText('map_pedestrians', geoIntel.pedestrians.toLocaleString());
+            updateText('legend_demand', `${data.score} / 100 local demand index`);
+
+            updateText('audit_timestamp', data.evaluated_at || new Date().toLocaleString());
+            updateText('audit_id', 'EV-' + Math.abs((data.business_name + data.city).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7)).toString(16).toUpperCase().slice(0, 8));
+
+            calculateDynamicEMI();
+            loadAlerts();
+            document.getElementById('scenarioResult').classList.add('hidden');
+            lastMemo = "";
+            document.getElementById('memoPanel').innerHTML = '<p class="text-slate-400 italic">Generate a written credit memo for this file — executive summary, signal analysis, risk assessment, recommended terms, and a final decision with confidence level. It reads the live scoring data and whichever map layers you have active.</p>';
+
+            if (map) {
+                map.setView(data.coords, 14);
+                if (markerNode) map.removeLayer(markerNode);
+                if (radiusCircle) map.removeLayer(radiusCircle);
+
+                const scoreColor = data.score >= 70 ? '#10b981' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
+                const customPin = L.divIcon({
+                    className: '',
+                    html: `<div class="relative flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-700 to-indigo-600 rounded-full text-white font-black shadow-2xl border-2 border-white hero-pulse-ring transition-transform duration-300 hover:scale-110"><span class="text-xl">${data.icon}</span><div style="border-color:${scoreColor};color:${scoreColor}" class="absolute -bottom-2 -right-2 bg-white border-2 font-extrabold text-[10px] w-7 h-7 rounded-full flex items-center justify-center shadow-md">${data.score}</div></div>`
+                });
+                markerNode = L.marker(data.coords, { icon: customPin }).addTo(map);
+                markerNode.bindTooltip(`${data.business_name} · score ${data.score}/100 · model confidence ${data.probability}`, { className: 'geo-tip', direction: 'top', offset: [0, -28] });
+                radiusCircle = L.circle(data.coords, { color: '#6B46C1', weight: 2, dashArray: '6, 6', fillColor: '#6B46C1', fillOpacity: 0.06, radius: 2000 }).addTo(map);
+                renderVisualOverlays();
+                updateHistorySidebar(data.business_name, data.city, data.score);
+                setTimeout(() => { map.invalidateSize(); }, 200);
+            }
+        }
+
+        function loadAlerts() {
+            const country = document.getElementById('countrySelector').value;
+            fetch(`/api/alerts?country=${encodeURIComponent(country)}`).then(r => r.json()).then(d => {
+                const styles = {
+                    positive: 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/80 dark:bg-emerald-900/15 text-emerald-800 dark:text-emerald-300',
+                    caution: 'border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-900/15 text-amber-800 dark:text-amber-300',
+                    risk: 'border-red-200 dark:border-red-900 bg-red-50/80 dark:bg-red-900/15 text-red-800 dark:text-red-300',
+                    data: 'border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300'
+                };
+                const dots = { positive: '●', caution: '●', risk: '●', data: '◌' };
+                document.getElementById('alertsBoard').innerHTML = d.alerts.map(a => `
+                    <div class="border ${styles[a.level] || styles.data} rounded-lg px-3.5 py-2.5 shadow-sm">
+                        <p class="text-xs font-extrabold">${dots[a.level] || '●'} ${escapeHTML(a.title)}</p>
+                        <p class="text-[11px] font-medium mt-0.5 leading-snug opacity-90">${escapeHTML(a.detail)}</p>
+                    </div>`).join('');
+            }).catch(() => {});
+        }
+
+        function runScenario(scenario) {
+            const country = document.getElementById('countrySelector').value;
+            const box = document.getElementById('scenarioResult');
+            box.classList.remove('hidden');
+            document.getElementById('scn_verdict').innerText = 'Running stress test...';
+            fetch('/api/scenario', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country, scenario })
+            }).then(r => r.json()).then(d => {
+                updateText('scn_base', `${d.base_score}/100`);
+                const s = document.getElementById('scn_stressed');
+                s.innerText = `${d.stressed_score}/100`;
+                s.className = d.stressed_score >= 70 ? 'text-emerald-600' : (d.stressed_score >= 55 ? 'text-amber-600' : 'text-red-500');
+                updateText('scn_tier', `${d.stressed_tier} · ${d.stressed_probability} repayment probability · EMI ${d.currency}${Number(d.adjusted_emi).toLocaleString()}/mo`);
+                updateText('scn_note', d.note);
+                updateText('scn_verdict', d.verdict);
+            }).catch(() => { updateText('scn_verdict', 'Stress engine unavailable — retry in a moment.'); });
+        }
+
+        function activeLayerLabels() { return LAYER_KEYS.filter(k => activeLayersState[k]).map(k => LAYER_LABELS[k]); }
+
+        function generateMemo() {
+            const country = document.getElementById('countrySelector').value;
+            const panel = document.getElementById('memoPanel');
+            const btn = document.getElementById('memoBtn');
+            btn.disabled = true; btn.innerText = 'Writing...';
+            panel.innerHTML = '<p class="text-slate-500 animate-pulse font-semibold">Analyst engine reading the file — signals, layers, terms...</p>';
+            fetch('/api/narrative', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country, active_layers: activeLayerLabels() })
+            }).then(r => r.json()).then(d => {
+                lastMemo = d.memo || '';
+                panel.innerHTML = `<div class="space-y-1">${mdLite(d.memo)}</div>`;
+                btn.disabled = false; btn.innerText = 'Regenerate';
+            }).catch(() => {
+                panel.innerHTML = '<p class="text-red-500 font-semibold">Memo engine unavailable — retry in a moment.</p>';
+                btn.disabled = false; btn.innerText = 'Generate Memo';
+            });
+        }
+
         function calculateDynamicEMI() {
-            const amount = document.getElementById('loanAmount').value;
-            const tenure = 12;
-            updateText('amountDisplay', Number(amount).toLocaleString());
-            const ratePerMonth = (11.5 / 100) / 12; 
+            const amount = Number(document.getElementById('loanAmount').value) || 0;
+            const tenure = Number(document.getElementById('tenureSlider').value) || 12;
+            const baseApr = Number(document.getElementById('aprSlider').value) || 11.5;
+            const riskAdj = Number(document.getElementById('riskAdjSlider').value) || 0;
+            const revenue = Number(document.getElementById('revenueSlider').value) || 0;
+            const apr = baseApr + riskAdj;
+
+            updateText('amountDisplay', amount.toLocaleString());
+            updateText('tenureDisplay', tenure);
+            updateText('aprDisplay', baseApr);
+            updateText('riskAdjDisplay', riskAdj);
+            updateText('effRateDisplay', apr.toFixed(1));
+            updateText('revenueDisplay', revenue.toLocaleString());
+
+            const ratePerMonth = (apr / 100) / 12;
             const emi = amount > 0 ? ((amount * ratePerMonth * Math.pow(1 + ratePerMonth, tenure)) / (Math.pow(1 + ratePerMonth, tenure) - 1)) : 0;
             document.getElementById('emiResult').innerText = Math.round(emi).toLocaleString();
+
+            const cur = cachedActiveData ? cachedActiveData.currency : '';
+            const ratio = revenue > 0 ? (emi / revenue * 100) : 0;
+            const line = document.getElementById('affordabilityLine');
+            const bar = document.getElementById('affordabilityBar');
+            if (line && bar) {
+                line.innerText = `${cur}${Math.round(emi).toLocaleString()} EMI = ${ratio.toFixed(1)}% of estimated monthly cash flow`;
+                bar.style.width = Math.min(100, ratio * 2.2) + '%';
+                const col = ratio < 15 ? '#10b981' : (ratio < 30 ? '#f59e0b' : '#ef4444');
+                bar.style.backgroundColor = col;
+                line.style.color = col;
+            }
         }
 
         function toggleWidget() { document.getElementById('aiBox').classList.toggle('hidden'); }
-        function catchEnter(e) { if(e.key === 'Enter') deliverMsg(); }
+        function catchEnter(e) { if (e.key === 'Enter') deliverMsg(); }
+        function sendSuggestion(text) { document.getElementById('aiInput').value = text; deliverMsg(); }
+        function generateLiveThesis() {
+            const layers = activeLayerLabels();
+            const ask = layers.length
+                ? `Write a live investment thesis for this business focused on the currently active analysis layers: ${layers.join(', ')}. Cover local trends, cash flow stability, and the specific loan terms.`
+                : `Write a live investment thesis for this business covering local macro-trends, cash flow stability, and the specific loan terms.`;
+            document.getElementById('aiInput').value = ask;
+            deliverMsg();
+        }
 
-        // ROBUST CHATBOT DELIVER FUNCTION
+        function appendTyping() {
+            const stream = document.getElementById('msgStream');
+            const el = document.createElement('div');
+            el.id = 'typingBubble';
+            el.className = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-lg rounded-tl-sm inline-block self-start shadow-sm';
+            el.innerHTML = '<span class="typing-dot"></span> <span class="typing-dot"></span> <span class="typing-dot"></span>';
+            stream.appendChild(el);
+            stream.scrollTop = stream.scrollHeight;
+        }
+        function removeTyping() { const t = document.getElementById('typingBubble'); if (t) t.remove(); }
+
         function deliverMsg() {
             const input = document.getElementById('aiInput');
             const message = input.value.trim();
-            if(!message) return;
+            if (!message) return;
 
             const stream = document.getElementById('msgStream');
             const currentCountry = document.getElementById('countrySelector') ? document.getElementById('countrySelector').value : 'India';
+            const contextBusiness = cachedActiveData ? cachedActiveData.business_name : 'the selected business';
 
-            // Optimistic rendering
-            stream.innerHTML += `<div class="bg-indigo-600 text-white p-3 rounded-xl rounded-tr-sm inline-block max-w-[85%] self-end shadow-sm">${message}</div>`;
+            stream.innerHTML += `<div class="bg-lendlypurple text-white p-3 rounded-lg rounded-tr-sm inline-block max-w-[85%] self-end shadow-sm text-[13px] leading-relaxed">${escapeHTML(message)}</div>`;
             input.value = '';
             stream.scrollTop = stream.scrollHeight;
+            appendTyping();
 
             fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message, country: currentCountry })
+                body: JSON.stringify({ message: message, country: currentCountry, business_data: cachedActiveData, history: chatHistory.slice(-8), active_layers: activeLayerLabels() })
             })
             .then(res => {
                 if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
                 return res.json();
             })
             .then(data => {
-                const replyText = data.reply ? data.reply : "No analysis returned from node processing pipeline.";
-                stream.innerHTML += `<div class="bg-white dark:bg-slate-800 border border-white/20 text-slate-800 dark:text-slate-100 p-3 rounded-xl rounded-tl-sm inline-block max-w-[85%] self-start shadow-sm leading-relaxed"><strong>AI:</strong> ${replyText}</div>`;
+                removeTyping();
+                const replyText = data.reply ? data.reply : "No analysis returned from the decision engine.";
+                chatHistory.push({ role: 'user', content: message });
+                chatHistory.push({ role: 'assistant', content: replyText });
+                stream.innerHTML += `<div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 p-3 rounded-lg rounded-tl-sm inline-block max-w-[85%] self-start shadow-sm leading-relaxed text-[13px]"><strong>AI:</strong> ${mdLite(replyText)}</div>`;
                 stream.scrollTop = stream.scrollHeight;
             })
             .catch(err => {
-                stream.innerHTML += `<div class="bg-red-500/10 border border-red-500/20 text-red-600 p-3 rounded-xl rounded-tl-sm inline-block max-w-[85%] self-start shadow-sm leading-relaxed"><strong>System Alert:</strong> Failed to get decision context. Server output: ${err.message}</div>`;
+                removeTyping();
+                stream.innerHTML += `<div class="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg rounded-tl-sm inline-block max-w-[85%] self-start shadow-sm leading-relaxed text-[13px]"><strong>System:</strong> Couldn't reach the decision engine (${escapeHTML(err.message)}). Check the connection and retry.</div>`;
                 stream.scrollTop = stream.scrollHeight;
             });
         }
 
+        const dz = () => document.getElementById('dropZone');
+        document.addEventListener('DOMContentLoaded', () => {
+            const zone = dz();
+            if (!zone) return;
+            ['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('ring-2','ring-lendlypurple'); }));
+            ['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('ring-2','ring-lendlypurple'); }));
+            zone.addEventListener('drop', e => {
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) uploadDocument(file);
+            });
+        });
+
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            uploadDocument(file);
+        }
 
+        function uploadDocument(file) {
             document.getElementById('uploadStatus').classList.remove('hidden');
             document.getElementById('docResults').classList.add('hidden');
 
             const formData = new FormData();
             formData.append('document', file);
+            formData.append('country', document.getElementById('countrySelector').value);
 
             fetch('/api/upload-document', {
                 method: 'POST',
@@ -525,39 +1278,143 @@
                 document.getElementById('uploadStatus').classList.add('hidden');
                 document.getElementById('docResults').classList.remove('hidden');
                 
+                let successMsg = "";
+                if (data.business_data) {
+                    populateDashboard(data.business_data); // Takeover main UI
+                    successMsg = `<div class="bg-emerald-50/80 border border-emerald-200 text-emerald-700 p-3 rounded-lg mb-4 font-bold text-sm shadow-sm flex items-center gap-2">✓ Active borrower profile fully updated: ${escapeHTML(data.business_data.business_name)}</div>`;
+                }
+
+                const missing = (data.missing_documents || []).map(d => `<li>○ ${escapeHTML(d)}</li>`).join('');
+                const questions = (data.outstanding_questions || []).map(q => `<li>• ${escapeHTML(q)}</li>`).join('');
+                
+                let predictionHtml = '';
+                if(data.ai_predictions) {
+                    predictionHtml = `<div class="mt-4 p-4 rounded-lg bg-gradient-to-r from-purple-100/50 to-indigo-100/50 dark:from-purple-900/15 dark:to-indigo-900/15 border border-purple-200 dark:border-purple-800">
+                        <p class="text-[11px] font-black uppercase tracking-wider text-lendlypurple mb-2">✨ AI Predicted Missing Info</p>
+                        <div class="space-y-2 text-xs">`;
+                    for(const [key, val] of Object.entries(data.ai_predictions)) {
+                        predictionHtml += `<div class="flex flex-col"><span class="font-bold text-slate-500">${escapeHTML(key)}</span><span class="text-slate-800 dark:text-slate-200 font-semibold">${escapeHTML(val)}</span></div>`;
+                    }
+                    predictionHtml += `</div></div>`;
+                }
+
+                const insight = data.ai_insight ? `
+                    <div class="bg-purple-50/50 dark:bg-purple-900/15 p-3 rounded-lg border border-purple-200 dark:border-purple-800 mt-4">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-lendlypurple mb-1.5">AI Cross-Reference Insight</p>
+                        <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">${escapeHTML(data.ai_insight)}</p>
+                    </div>` : '';
+
                 const content = `
-                    <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
                         <div>
-                            <p class="font-bold text-slate-800 dark:text-white">${data.document_name} <span class="bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black ml-2">PROCESSED ✓</span></p>
-                            <p class="text-xs text-slate-500 mt-0.5">Type: ${data.document_type.toUpperCase()}</p>
+                            <p class="font-bold text-slate-800 dark:text-white text-lg">${escapeHTML(data.document_name)} <span class="bg-emerald-100 text-emerald-700 dark:bg-emerald-500 dark:text-white text-[9px] px-2 py-0.5 rounded font-black ml-2">PROCESSED ✓</span></p>
+                            <p class="text-xs text-slate-500 mt-0.5">Type: ${escapeHTML(data.document_type.toUpperCase())}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">OCR Confidence</p>
-                            <p class="font-black text-indigo-600 text-lg">${data.confidence_score * 100}%</p>
+                            <p class="font-black text-lendlypurple text-2xl">${Math.round(data.confidence_score * 100)}%</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 py-2 text-xs">
                         <div>
                             <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Data Cross-Check</p>
-                            <p class="text-green-600 font-bold mb-1">✓ ${data.verification_summary.business_legitimacy}</p>
-                            <p class="text-green-600 font-bold mb-1">✓ ${data.verification_summary.address_verification}</p>
-                            <p class="text-green-600 font-bold">✓ ${data.verification_summary.payment_reliability}</p>
+                            <p class="text-emerald-600 font-bold mb-1">✓ ${escapeHTML(data.verification_summary.business_legitimacy)}</p>
+                            <p class="text-emerald-600 font-bold mb-1">✓ ${escapeHTML(data.verification_summary.address_verification)}</p>
+                            <p class="text-emerald-600 font-bold mb-1">✓ ${escapeHTML(data.verification_summary.income_verification)}</p>
+                            <p class="text-emerald-600 font-bold">✓ ${escapeHTML(data.verification_summary.payment_reliability)}</p>
                         </div>
                         <div>
                             <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Fraud Detection</p>
-                            <span class="bg-green-500/10 border border-green-500/20 text-green-600 font-black px-2.5 py-1 rounded-md block w-max">${data.fraud_check.fraud_risk}</span>
+                            <span class="bg-emerald-50 border border-emerald-200 text-emerald-700 font-black px-2.5 py-1 rounded block w-max">${escapeHTML(data.fraud_check.fraud_risk)}</span>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 mt-3">Still Missing</p>
+                            <ul class="text-slate-500 font-semibold space-y-0.5">${missing}</ul>
                         </div>
                     </div>
-                    <div class="bg-slate-100 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-white/5">
+                    ${predictionHtml}
+                    ${insight}
+                    <div class="mt-4">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Outstanding Questions for the Borrower</p>
+                        <ul class="text-xs font-semibold text-slate-700 dark:text-slate-300 space-y-0.5">${questions}</ul>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800 mt-4 shadow-sm">
                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">System Recommendation</p>
-                        <p class="text-sm font-bold text-slate-800 dark:text-slate-200">${data.recommendation}</p>
+                        <p class="text-sm font-bold text-slate-800 dark:text-slate-200">${escapeHTML(data.recommendation)}</p>
                     </div>`;
-                document.getElementById('docResultContent').innerHTML = content;
+                document.getElementById('docResultContent').innerHTML = successMsg + content;
             })
             .catch(err => {
                 document.getElementById('uploadStatus').classList.add('hidden');
-                alert("Error processing document securely.");
+                alert("The document couldn't be processed. Check the file type and try again.");
             });
+        }
+
+        function runManualPrescore() {
+            const name = document.getElementById('man_name').value.trim() || 'Unnamed Business';
+            const city = document.getElementById('man_city').value.trim() || 'Unknown';
+            const sector = document.getElementById('man_sector').value.trim() || 'General';
+            const revenue = Number(document.getElementById('man_revenue').value) || 0;
+            const txns = Number(document.getElementById('man_txns').value) || 0;
+
+            const revScore = Math.min(40, Math.log10(Math.max(10, revenue)) * 8);
+            const txnScore = Math.min(35, Math.log10(Math.max(10, txns)) * 11);
+            const base = Math.round(20 + revScore + txnScore);
+            const score = Math.max(15, Math.min(88, base));
+            const tier = score >= 70 ? 'TIER 1 - AUTO-APPROVE' : (score >= 55 ? 'TIER 2 - REVIEWED APPROVAL' : (score >= 40 ? 'TIER 3 - CONDITIONAL' : 'NOT APPROVED - CRITICAL RISK'));
+            const color = score >= 70 ? 'text-emerald-600' : (score >= 40 ? 'text-amber-600' : 'text-red-500');
+
+            const box = document.getElementById('manualResult');
+            box.classList.remove('hidden');
+            box.innerHTML = `
+                <p class="font-extrabold text-slate-900 dark:text-white text-sm">${escapeHTML(name)} <span class="text-slate-400 font-semibold">· ${escapeHTML(city)} · ${escapeHTML(sector)}</span></p>
+                <p class="font-black text-2xl ${color}">${score}/100 <span class="text-xs font-bold">${tier}</span></p>
+                <p class="text-slate-500 leading-snug">Provisional only — based on self-reported revenue and transaction volume. Connect UPI/bank statements and location data for a full evaluation with geospatial signals.</p>`;
+        }
+
+        function exportReport() {
+            if (!cachedActiveData) return;
+            const d = cachedActiveData;
+            const m = d.metrics;
+            const p = d.profile || {};
+            const layers = activeLayerLabels();
+            const w = window.open('', '_blank');
+            w.document.write(`<!DOCTYPE html><html><head><title>Lendly Evaluation Report — ${escapeHTML(d.business_name)}</title>
+                <style>body{font-family:Inter,Arial,sans-serif;color:#0f172a;max-width:760px;margin:32px auto;padding:0 24px;font-size:13px;line-height:1.55}
+                h1{font-size:22px;margin-bottom:2px}h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-top:26px}
+                table{width:100%;border-collapse:collapse;margin-top:8px}td{padding:5px 8px;border:1px solid #e2e8f0}td:first-child{color:#64748b;width:44%}
+                .tag{display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;font-weight:600}
+                .decision{border-left:4px solid #6B46C1;background:#faf5ff;padding:12px 16px;margin-top:10px;font-weight:700}
+                .memo{white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:6px;margin-top:8px}
+                footer{margin-top:34px;color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:10px}</style></head><body>
+                <h1>Lendly — Credit Evaluation Report</h1>
+                <div style="color:#64748b;font-weight:600">${escapeHTML(d.business_name)} · ${escapeHTML(d.city)} · ${escapeHTML(d.sector)} · ${escapeHTML(d.evaluated_at || new Date().toLocaleString())}</div>
+                <div class="decision">Decision: ${escapeHTML(d.tier)} — Repayment probability ${escapeHTML(d.probability)}${d.loan_config.default_amt > 0 ? ` — Recommended ${escapeHTML(d.currency)}${Number(d.loan_config.default_amt).toLocaleString()} @ 11.5% APR / 12 mo (EMI ${escapeHTML(d.currency)}${Number(d.loan_config.default_emi).toLocaleString()})` : ''}</div>
+                <h2>Score Summary</h2>
+                <table>
+                    <tr><td>AI Credit Score</td><td>${d.ai_rating} / 900</td></tr>
+                    <tr><td>Composite Score</td><td>${d.score} / 100</td></tr>
+                    <tr><td>Geospatial Grade</td><td>${escapeHTML(d.geo_grade)}</td></tr>
+                    <tr><td>Cash Flow Volatility</td><td>${escapeHTML(d.cash_flow_volatility)}</td></tr>
+                    <tr><td>Payment Velocity (40% weight)</td><td>${m.payment_velocity}%</td></tr>
+                    <tr><td>Location Demand (25%)</td><td>${m.location_demand}%</td></tr>
+                    <tr><td>Transaction Consistency (20%)</td><td>${m.transaction_consistency}%</td></tr>
+                    <tr><td>Sector Micro Risk (15% inverse)</td><td>${m.business_risk}%</td></tr>
+                </table>
+                <h2>Borrower Profile</h2>
+                <table>
+                    <tr><td>Business Age</td><td>${escapeHTML(p.business_age || '--')}</td></tr>
+                    <tr><td>Monthly Revenue Estimate</td><td>${escapeHTML(d.currency)}${Number(p.monthly_revenue || 0).toLocaleString()}</td></tr>
+                    <tr><td>Monthly Transaction Volume</td><td>${Number(p.monthly_txn_volume || 0).toLocaleString()}</td></tr>
+                    <tr><td>Repayment History</td><td>${escapeHTML(p.repayment_history || '--')}</td></tr>
+                    <tr><td>Owner Verification</td><td>${p.owner_verified ? 'Verified (KYC complete)' : 'Unverified'}</td></tr>
+                    <tr><td>EMI Affordability Ratio</td><td>${p.emi_affordability_ratio || '--'}% of monthly cash flow</td></tr>
+                </table>
+                <h2>Geospatial Layers Reviewed</h2>
+                <div>${layers.length ? layers.map(l => `<span class="tag">${escapeHTML(l)}</span>`).join('') : '<span class="tag">baseline evaluation only</span>'}</div>
+                ${lastMemo ? `<h2>Analyst Credit Memo</h2><div class="memo">${mdLite(lastMemo)}</div>` : ''}
+                <h2>Model Notes</h2><p>${escapeHTML(d.explanation)}</p>
+                <footer>Data sources: UPI streams · utility records · telecom recharges · geospatial mobility · municipal registries. Model GeoScore v2.4 · Risk policy RP-2026.07 · Secure share links expire after 30 days for compliance.<br>Decision generated using transaction, location, and sector-risk data. Final lending approval subject to lender policy and compliance review.</footer>
+                <script>window.print();<\/script></body></html>`);
+            w.document.close();
         }
     </script>
 </body>

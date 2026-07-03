@@ -1,334 +1,254 @@
-import os
+from flask import Flask, request, jsonify, render_template
 import time
-from pathlib import Path
-from flask import Flask, render_template, request, jsonify
-from dotenv import load_dotenv
-from werkzeug.utils import secure_filename
-from groq import Groq
+import random
 
-
-load_dotenv(Path(__file__).resolve().parent / ".env")
 app = Flask(__name__)
 
+# Dynamic Business Data mapping to handle dropdowns and uploads properly
+def generate_mock_business_data(name=None, country="India", lat=None, lng=None):
+    db = {
+        "India": {"name": "Maneesh Textiles", "city": "New Delhi", "curr": "₹", "lat": 28.6139, "lng": 77.2090},
+        "USA": {"name": "TechNova Solutions", "city": "Austin, TX", "curr": "$", "lat": 30.2672, "lng": -97.7431},
+        "Uzbekistan": {"name": "Alisher Electronics", "city": "Tashkent", "curr": "UZS", "lat": 41.2995, "lng": 69.2401},
+        "Kenya": {"name": "Nairobi Fresh Exports", "city": "Nairobi", "curr": "KSh", "lat": -1.2921, "lng": 36.8219},
+        "Brazil": {"name": "Rio Coffee Distributors", "city": "Rio de Janeiro", "curr": "R$", "lat": -22.9068, "lng": -43.1729},
+        "Egypt": {"name": "Cairo Traders", "city": "Cairo", "curr": "E£", "lat": 30.0444, "lng": 31.2357},
+        "United Kingdom": {"name": "Thames Logistics", "city": "London", "curr": "£", "lat": 51.5074, "lng": -0.1278},
+    }
+    
+    info = db.get(country, {
+        "name": f"{country} Global Trade",
+        "city": f"{country} Capital",
+        "curr": "$", # Fallback to standard symbol instead of ¤
+        "lat": random.uniform(-40, 60),
+        "lng": random.uniform(-100, 100)
+    })
+    
+    base_score = random.randint(45, 92) if not name else 78
+    tier = "TIER 1 - AUTO-APPROVE" if base_score >= 70 else ("TIER 2 - REVIEWED" if base_score >= 55 else "NOT APPROVED - CRITICAL RISK")
 
-# Load environment variables from .env (for local development)
-# Render will set these automatically in the environment.
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-client = None
-
-if GROQ_API_KEY:
-    try:
-        client = Groq(api_key=GROQ_API_KEY)
-    except Exception:
-        client = None
-
-
-# ALL 20 ORIGINAL COUNTRIES RESTORED EXACTLY
-MARKET_DATABASE = {
-   "India": {
-       "business_name": "Maneesh Textiles", "city": "New Delhi", "sector": "Retail Clothing", "icon": "🛍️", "ai_rating": 742, "geo_grade": "A+", "cash_flow_volatility": "12.4%", "eval_speed": "3.2s", "score": 74,
-       "probability": "87%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 20000, "recommended_emi": 1763,
-       "metrics": {"payment_velocity": 92, "location_demand": 85, "transaction_consistency": 78, "business_risk": 14},
-       "coords": [28.6139, 77.2090], "currency": "₹",
-       "loan_config": {"min": 5000, "max": 100000, "step": 5000, "default_amt": 20000, "default_emi": 1763},
-       "explanation": "High credit reliability proven by 92% payment velocity, 8,500 daily pedestrians converting to sales, and +23% YoY foot traffic growth.",
-       "layers": {
-           "traffic": [[28.6145, 77.2100], [28.6130, 77.2075]], "growth": [[28.6160, 77.2120, 23]],
-           "competitors": [[28.6120, 77.2110, "🍵 Tea Shop"], [28.6150, 77.2060, "🧃 Juice Bar"]],
-           "flows": [[28.6135, 77.2095, 450]]
-       }
-   },
-   "Uzbekistan": {
-       "business_name": "Samarkand Silk Carpets", "city": "Tashkent", "sector": "Artisanal Textiles", "icon": "🏺", "ai_rating": 765, "geo_grade": "A", "cash_flow_volatility": "10.2%", "eval_speed": "2.4s", "score": 78,
-       "probability": "89%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 25000000, "recommended_emi": 2204000,
-       "metrics": {"payment_velocity": 94, "location_demand": 82, "transaction_consistency": 81, "business_risk": 11},
-       "coords": [41.2995, 69.2401], "currency": "soʻm",
-       "loan_config": {"min": 5000000, "max": 100000000, "step": 5000000, "default_amt": 25000000, "default_emi": 2204000},
-       "explanation": "Excellent transaction metrics driven by strong tourist card processing velocity and low sector saturation within Tashkent hub corridors.",
-       "layers": {"traffic": [[41.3010, 69.2420]], "growth": [[41.2980, 69.2380, 18]], "competitors": [[41.3030, 69.2390, "🏺 Gift Shop"]], "flows": [[41.2990, 69.2410, 380]]}
-   },
-   "Kenya": {
-       "business_name": "Jambo Agro-Supplies", "city": "Nairobi", "sector": "Agro-Distribution", "icon": "🚜", "ai_rating": 685, "geo_grade": "B+", "cash_flow_volatility": "18.1%", "eval_speed": "2.8s", "score": 68,
-       "probability": "81%", "tier": "TIER 2 - REVIEWED APPROVAL", "recommended_amt": 250000, "recommended_emi": 22150,
-       "metrics": {"payment_velocity": 81, "location_demand": 74, "transaction_consistency": 85, "business_risk": 22},
-       "coords": [-1.2921, 36.8219], "currency": "KSh",
-       "loan_config": {"min": 50000, "max": 1000000, "step": 25000, "default_amt": 250000, "default_emi": 22150},
-       "explanation": "Consistent mobile money transaction velocity via M-Pesa merchant logs registers stable cash flow buffers.",
-       "layers": {"traffic": [[-1.2910, 36.8230]], "growth": [[-1.2935, 36.8200, 12]], "competitors": [[-1.2940, 36.8240, "🚜 Feed Store"]], "flows": [[-1.2915, 36.8225, 180]]}
-   },
-   "Brazil": {
-       "business_name": "Paulista Distribuidora", "city": "São Paulo", "sector": "Logistics Hub", "icon": "📦", "ai_rating": 810, "geo_grade": "A++", "cash_flow_volatility": "6.2%", "eval_speed": "4.1s", "score": 88,
-       "probability": "94%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 45000, "recommended_emi": 3980,
-       "metrics": {"payment_velocity": 96, "location_demand": 94, "transaction_consistency": 91, "business_risk": 8},
-       "coords": [-23.5505, -46.6333], "currency": "R$",
-       "loan_config": {"min": 10000, "max": 200000, "step": 5000, "default_amt": 45000, "default_emi": 3980},
-       "explanation": "Flawless alternative logistics network tracking parameters across central highway freight terminals.",
-       "layers": {"traffic": [[-23.5510, -46.6320]], "growth": [[-23.5490, -46.6350, 26]], "competitors": [], "flows": [[-23.5500, -46.6340, 600]]}
-   },
-   "USA": {
-       "business_name": "Midwest Auto Parts", "city": "Chicago", "sector": "Automotive Retail", "icon": "🚗", "ai_rating": 795, "geo_grade": "A", "cash_flow_volatility": "9.5%", "eval_speed": "2.1s", "score": 82,
-       "probability": "91%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 30000, "recommended_emi": 2650,
-       "metrics": {"payment_velocity": 89, "location_demand": 81, "transaction_consistency": 88, "business_risk": 12},
-       "coords": [41.8781, -87.6298], "currency": "$",
-       "loan_config": {"min": 5000, "max": 150000, "step": 5000, "default_amt": 30000, "default_emi": 2650},
-       "explanation": "Solid auto components recovery pipeline verified via point-of-sale invoice financing ledgers.",
-       "layers": {"traffic": [[41.8790, -87.6280]], "growth": [[41.8770, -87.6310, 16]], "competitors": [], "flows": [[41.8785, -87.6290, 520]]}
-   },
-   "Indonesia": {
-       "business_name": "Sunda Kelapa Logistics", "city": "Jakarta", "sector": "Maritime Logistics", "icon": "🚢", "ai_rating": 715, "geo_grade": "A-", "cash_flow_volatility": "14.2%", "eval_speed": "3.0s", "score": 71,
-       "probability": "84%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 50000000, "recommended_emi": 4430000,
-       "metrics": {"payment_velocity": 85, "location_demand": 88, "transaction_consistency": 74, "business_risk": 18},
-       "coords": [-6.2088, 106.8456], "currency": "Rp",
-       "loan_config": {"min": 10000000, "max": 300000000, "step": 5000000, "default_amt": 50000000, "default_emi": 4430000},
-       "explanation": "Port shipping allocation lanes show consistent invoice clearance history pipelines.",
-       "layers": {"traffic": [], "growth": [[-6.2070, 106.8440, 14]], "competitors": [], "flows": [[-6.2085, 106.8450, 910]]}
-   },
-   "Nigeria": {
-       "business_name": "Ikeja Tech Ventures", "city": "Lagos", "sector": "Electronics", "icon": "💻", "ai_rating": 690, "geo_grade": "B", "cash_flow_volatility": "19.8%", "eval_speed": "3.9s", "score": 66,
-       "probability": "79%", "tier": "TIER 2 - REVIEWED APPROVAL", "recommended_amt": 1200000, "recommended_emi": 106300,
-       "metrics": {"payment_velocity": 83, "location_demand": 70, "transaction_consistency": 79, "business_risk": 25},
-       "coords": [6.5244, 3.3792], "currency": "₦",
-       "loan_config": {"min": 200000, "max": 5000000, "step": 100000, "default_amt": 1200000, "default_emi": 106300},
-       "explanation": "Component hardware processing networks present safe baseline profiles.",
-       "layers": {"traffic": [[6.5250, 3.3800]], "growth": [], "competitors": [], "flows": []}
-   },
-   "Mexico": {
-       "business_name": "Condesa Cafetería", "city": "Mexico City", "sector": "Cafe & Eatery", "icon": "☕", "ai_rating": 760, "geo_grade": "A", "cash_flow_volatility": "11.1%", "eval_speed": "2.7s", "score": 77,
-       "probability": "89%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 180000, "recommended_emi": 15950,
-       "metrics": {"payment_velocity": 90, "location_demand": 92, "transaction_consistency": 82, "business_risk": 15},
-       "coords": [19.4326, -99.1332], "currency": "$",
-       "loan_config": {"min": 10000, "max": 400000, "step": 10000, "default_amt": 180000, "default_emi": 15950},
-       "explanation": "High local food and beverage service usage matches steady merchant terminal logs.",
-       "layers": {"traffic": [[19.4335, -99.1320]], "growth": [[19.4315, -99.1345, 21]], "competitors": [], "flows": []}
-   },
-   "Philippines": {
-       "business_name": "Manila Bay Seafoods", "city": "Manila", "sector": "Wholesale Market", "icon": "🐟", "ai_rating": 730, "geo_grade": "A-", "cash_flow_volatility": "13.5%", "eval_speed": "3.1s", "score": 73,
-       "probability": "85%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 220000, "recommended_emi": 19500,
-       "metrics": {"payment_velocity": 88, "location_demand": 84, "transaction_consistency": 80, "business_risk": 16},
-       "coords": [14.5995, 120.9842], "currency": "₱",
-       "loan_config": {"min": 20000, "max": 500000, "step": 10000, "default_amt": 220000, "default_emi": 19500},
-       "explanation": "Bulk storage logistics networks guarantee consistent downstream distributor processing.",
-       "layers": {"traffic": [], "growth": [], "competitors": [], "flows": [[14.5990, 120.9840, 310]]}
-   },
-   "United Kingdom": {
-       "business_name": "Soho Tech Solutions", "city": "London", "sector": "IT Services", "icon": "💻", "ai_rating": 820, "geo_grade": "A+", "cash_flow_volatility": "5.4%", "eval_speed": "2.0s", "score": 89,
-       "probability": "95%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 40000, "recommended_emi": 3520,
-       "metrics": {"payment_velocity": 97, "location_demand": 89, "transaction_consistency": 94, "business_risk": 7},
-       "coords": [51.5074, -0.1278], "currency": "£",
-       "loan_config": {"min": 5000, "max": 200000, "step": 5000, "default_amt": 40000, "default_emi": 3520},
-       "explanation": "Excellent recurring monthly software-as-a-service cash flow trends ensure prime safety profiles.",
-       "layers": {"traffic": [[51.5080, -0.1260]], "growth": [[51.5060, -0.1290, 19]], "competitors": [], "flows": []}
-   },
-   "Germany": {
-       "business_name": "München Auto Werk", "city": "Munich", "sector": "Automotive Engineering", "icon": "🔧", "ai_rating": 805, "geo_grade": "A", "cash_flow_volatility": "7.1%", "eval_speed": "2.2s", "score": 86,
-       "probability": "93%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 50000, "recommended_emi": 4400,
-       "metrics": {"payment_velocity": 95, "location_demand": 83, "transaction_consistency": 90, "business_risk": 9},
-       "coords": [48.1351, 11.5820], "currency": "€",
-       "loan_config": {"min": 10000, "max": 250000, "step": 5000, "default_amt": 50000, "default_emi": 4400},
-       "explanation": "Premium mechanical fabrication infrastructure backlog contracts prove deep financial security.",
-       "layers": {"traffic": [], "growth": [], "competitors": [], "flows": []}
-   },
-   "France": {
-       "business_name": "Marais Bistro", "city": "Paris", "sector": "Hospitality", "icon": "🍷", "ai_rating": 740, "geo_grade": "A-", "cash_flow_volatility": "12.0%", "eval_speed": "2.9s", "score": 75,
-       "probability": "86%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 35000, "recommended_emi": 3080,
-       "metrics": {"payment_velocity": 91, "location_demand": 86, "transaction_consistency": 80, "business_risk": 15},
-       "coords": [48.8566, 2.3522], "currency": "€",
-       "loan_config": {"min": 5000, "max": 150000, "step": 5000, "default_amt": 35000, "default_emi": 3080},
-       "explanation": "High continuous localized entertainment spending activity stabilizes repayment structures.",
-       "layers": {"traffic": [[48.8570, 2.3540]], "growth": [], "competitors": [], "flows": []}
-   },
-   "Japan": {
-       "business_name": "Shibuya Ramen Station", "city": "Tokyo", "sector": "Restaurant", "icon": "🍜", "ai_rating": 830, "geo_grade": "A++", "cash_flow_volatility": "4.8%", "eval_speed": "1.8s", "score": 91,
-       "probability": "96%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 3000000, "recommended_emi": 264000,
-       "metrics": {"payment_velocity": 98, "location_demand": 96, "transaction_consistency": 95, "business_risk": 5},
-       "coords": [35.6580, 139.7016], "currency": "¥",
-       "loan_config": {"min": 500000, "max": 10000000, "step": 500000, "default_amt": 3000000, "default_emi": 264000},
-       "explanation": "Dense passenger hub transit footprint registers exceptional merchant terminal volumes.",
-       "layers": {"traffic": [[35.6590, 139.7020]], "growth": [[35.6570, 139.7000, 32]], "competitors": [], "flows": []}
-   },
-   "Australia": {
-       "business_name": "Melbourne Brew Lab", "city": "Melbourne", "sector": "Cafe", "icon": "☕", "ai_rating": 775, "geo_grade": "A", "cash_flow_volatility": "9.1%", "eval_speed": "2.3s", "score": 80,
-       "probability": "90%", "tier": "TIER 1 - AUTO-APPROVE", "recommended_amt": 40000, "recommended_emi": 3520,
-       "metrics": {"payment_velocity": 93, "location_demand": 87, "transaction_consistency": 85, "business_risk": 11},
-       "coords": [-37.8136, 144.9631], "currency": "A$",
-       "loan_config": {"min": 5000, "max": 150000, "step": 5000, "default_amt": 40000, "default_emi": 3520},
-       "explanation": "Highly predictable local consumer return baselines guarantee stable underwriter metrics.",
-       "layers": {"traffic": [[-37.8120, 144.9650]], "growth": [], "competitors": [], "flows": []}
-   },
-   "Canada": {
-       "business_name": "Ontario Timber Craft", "city": "Toronto", "sector": "Manufacturing", "icon": "🪓", "ai_rating": 720, "geo_grade": "B+", "cash_flow_volatility": "14.8%", "eval_speed": "3.1s", "score": 70,
-       "probability": "83%", "tier": "TIER 2 - REVIEWED APPROVAL", "recommended_amt": 50000, "recommended_emi": 4420,
-       "metrics": {"payment_velocity": 86, "location_demand": 77, "transaction_consistency": 81, "business_risk": 19},
-       "coords": [43.6532, -79.3832], "currency": "C$",
-       "loan_config": {"min": 10000, "max": 200000, "step": 5000, "default_amt": 50000, "default_emi": 4420},
-       "explanation": "Stable commercial supply invoice patterns securely balance out minor supply chain friction.",
-       "layers": {"traffic": [], "growth": [], "competitors": [], "flows": []}
-   },
-   "Vietnam": {
-       "business_name": "Dong Xuan Souvenirs", "city": "Hanoi", "sector": "Tourist Retail", "icon": "🎋", "ai_rating": 310, "geo_grade": "D", "cash_flow_volatility": "44.2%", "eval_speed": "4.5s", "score": 28,
-       "probability": "32%", "tier": "NOT APPROVED - CRITICAL RISK", "recommended_amt": 0, "recommended_emi": 0,
-       "metrics": {"payment_velocity": 34, "location_demand": 21, "transaction_consistency": 40, "business_risk": 82},
-       "coords": [21.0285, 105.8542], "currency": "₫",
-       "loan_config": {"min": 0, "max": 0, "step": 0, "default_amt": 0, "default_emi": 0},
-       "explanation": "Severe revenue volatility metrics matched with hyper-saturated low-margin competitor fields flag terminal risk indicators.",
-       "layers": {"traffic": [], "growth": [], "competitors": [[21.0300, 105.8560, "🎋 Gift Stand"]], "flows": []}
-   },
-   "Egypt": {
-       "business_name": "Cairo Artisans Guild", "city": "Cairo", "sector": "Bazaar Retail", "icon": "🏺", "ai_rating": 345, "geo_grade": "D+", "cash_flow_volatility": "39.0%", "eval_speed": "3.8s", "score": 35,
-       "probability": "41%", "tier": "NOT APPROVED - CRITICAL RISK", "recommended_amt": 0, "recommended_emi": 0,
-       "metrics": {"payment_velocity": 41, "location_demand": 33, "transaction_consistency": 38, "business_risk": 78},
-       "coords": [30.0444, 31.2357], "currency": "E£",
-       "loan_config": {"min": 0, "max": 0, "step": 0, "default_amt": 0, "default_emi": 0},
-       "explanation": "Severe alternative asset ledger anomalies alongside major local macro currency friction block compliance criteria.",
-       "layers": {"traffic": [], "growth": [], "competitors": [], "flows": []}
-   },
-   "Turkey": {
-       "business_name": "Anatolia Spice Trading", "city": "Istanbul", "sector": "Wholesale Market", "icon": "🌶️", "ai_rating": 390, "geo_grade": "C-", "cash_flow_volatility": "35.1%", "eval_speed": "3.9s", "score": 39,
-       "probability": "46%", "tier": "NOT APPROVED - CRITICAL RISK", "recommended_amt": 0, "recommended_emi": 0,
-       "metrics": {"payment_velocity": 45, "location_demand": 42, "transaction_consistency": 49, "business_risk": 72},
-       "coords": [41.0082, 28.9784], "currency": "₺",
-       "loan_config": {"min": 0, "max": 0, "step": 0, "default_amt": 0, "default_emi": 0},
-       "explanation": "Negative regional cash trend indexes point to ongoing transactional capital preservation problems.",
-       "layers": {"traffic": [], "growth": [], "competitors": [], "flows": []}
-   },
-   "Greece": {
-       "business_name": "Plaka Souvlaki Hub", "city": "Athens", "sector": "Food Service", "icon": "🍽️", "ai_rating": 410, "geo_grade": "C", "cash_flow_volatility": "31.4%", "eval_speed": "3.1s", "score": 42,
-       "probability": "49%", "tier": "NOT APPROVED - CRITICAL RISK", "recommended_amt": 0, "recommended_emi": 0,
-       "metrics": {"payment_velocity": 50, "location_demand": 44, "transaction_consistency": 41, "business_risk": 68},
-       "coords": [37.9838, 23.7275], "currency": "€",
-       "loan_config": {"min": 0, "max": 0, "step": 0, "default_amt": 0, "default_emi": 0},
-       "explanation": "Hyper-saturated commercial zone filters identify dense low-performing competitive blocks.",
-       "layers": {"traffic": [], "growth": [], "competitors": [[37.9850, 23.7290, "🍔 Diner"]], "flows": []}
-   },
-   "Argentina": {
-       "business_name": "Palermo Leather Outlets", "city": "Buenos Aires", "sector": "Retail Apparel", "icon": "🧥", "ai_rating": 290, "geo_grade": "E", "cash_flow_volatility": "56.2%", "eval_speed": "4.2s", "score": 25,
-       "probability": "29%", "tier": "NOT APPROVED - CRITICAL RISK", "recommended_amt": 0, "recommended_emi": 0,
-       "metrics": {"payment_velocity": 22, "location_demand": 30, "transaction_consistency": 25, "business_risk": 91},
-       "coords": [-34.6037, -58.3816], "currency": "$",
-       "loan_config": {"min": 0, "max": 0, "step": 0, "default_amt": 0, "default_emi": 0},
-       "explanation": "Critical transaction consistency failure tracks complete operational cash drain parameters.",
-       "layers": {"traffic": [], "growth": [], "competitors": [], "flows": []}
-   }
-}
-
+    return {
+        "business_name": name if name else info["name"],
+        "city": info["city"],
+        "country": country,
+        "sector": "Retail & Commerce" if not name else "Textile Manufacturing",
+        "icon": "🛍️",
+        "coords": [lat if lat else info["lat"], lng if lng else info["lng"]],
+        "score": base_score,
+        "ai_rating": base_score * 10 + random.randint(0, 9),
+        "geo_grade": "A+" if base_score > 75 else "B",
+        "cash_flow_volatility": f"{random.uniform(5.0, 25.0):.1f}%",
+        "eval_speed": f"{random.uniform(1.1, 4.5):.1f}s",
+        "probability": f"{min(99, base_score + 12)}%",
+        "tier": tier,
+        "currency": info["curr"],
+        "loan_config": { "min": 5000, "max": 50000, "step": 1000, "default_amt": random.randint(15, 35) * 1000, "default_emi": random.randint(1000, 3000) },
+        "metrics": { "payment_velocity": random.randint(60, 98), "location_demand": random.randint(50, 95), "transaction_consistency": random.randint(60, 90), "business_risk": random.randint(5, 35) },
+        "profile": {
+            "business_age": f"{random.uniform(1.0, 10.0):.1f} years",
+            "monthly_revenue": random.randint(15000, 80000),
+            "monthly_txn_volume": random.randint(200, 1500),
+            "avg_daily_sales": random.randint(500, 2500),
+            "repayment_history": "100% on-time" if base_score > 60 else "2 late payments",
+            "owner_verified": True,
+            "emi_affordability_ratio": round(random.uniform(5.0, 25.0), 1),
+            "documents": { "bank_statements": True, "registration_certificate": True, "utility_bill": random.choice([True, False]), "lease_agreement": True }
+        },
+        "layers": { "traffic": [], "growth": [], "competitors": [], "flows": [] },
+        "evaluated_at": "Right now",
+        "explanation": f"Decision generated using {country} local transaction, location, and sector-risk data."
+    }
 
 @app.route('/')
-def home():
-   return render_template('index.html')
-
+def serve_index():
+    return render_template('index.html')
 
 @app.route('/api/market', methods=['GET'])
-def get_market_data():
-   country = request.args.get('country', 'India')
-   market_data = MARKET_DATABASE.get(country, MARKET_DATABASE['India'])
-   return jsonify(market_data)
-
+def market():
+    country = request.args.get('country', 'India')
+    return jsonify(generate_mock_business_data(country=country))
 
 @app.route('/api/search', methods=['GET'])
-def search_business():
-   query = request.args.get('q', '').strip()
-   if ',' in query:
-       try:
-           parts = query.split(',')
-           lat, lng = float(parts[0].strip()), float(parts[1].strip())
-           return jsonify({
-               "business_name": "Custom Coordinate Pin", "city": "Geospatial Frame", "sector": "Dynamic", "icon": "📍", "ai_rating": 725, "geo_grade": "A-", "cash_flow_volatility": "11.5%", "eval_speed": "1.1s", "score": 72,
-               "probability": "84%", "tier": "TIER 1 - AUTO-APPROVE", "metrics": {"payment_velocity": 85, "location_demand": 80, "transaction_consistency": 82, "business_risk": 15},
-               "coords": [lat, lng], "currency": "₹", "loan_config": {"min": 5000, "max": 100000, "step": 5000, "default_amt": 20000, "default_emi": 1763},
-               "explanation": "Custom target node coordinate query output.",
-               "layers": {"traffic": [[lat+0.001, lng+0.001]], "growth": [[lat-0.001, lng-0.001, 15]], "competitors": [], "flows": [[lat, lng, 100]]}
-           })
-       except ValueError:
-           pass
+def search():
+    query = request.args.get('q', 'Searched Business')
+    return jsonify(generate_mock_business_data(name=query, country="India"))
+
+@app.route('/api/alerts', methods=['GET'])
+def alerts():
+    country = request.args.get('country', 'India')
+    return jsonify({
+        "alerts": [
+            { "level": 'positive', "title": 'Strong Payment Velocity', "detail": 'Consistent daily cash flow minimizes repayment risk.' },
+            { "level": 'caution', "title": 'Sector Micro-Risk', "detail": 'Local sector shows slight seasonal volatility.' },
+            { "level": 'data', "title": 'Utility Bill Missing', "detail": 'Upload utility bill to strengthen location verification.' }
+        ]
+    })
+
+@app.route('/api/scenario', methods=['POST'])
+def scenario():
+    data = request.get_json() or {}
+    scenario_type = data.get('scenario', '')
+    stressed_score = 62 if scenario_type == 'traffic_drop' else 68
+    tier = 'TIER 2 - REVIEWED' if scenario_type == 'traffic_drop' else 'TIER 1 - APPROVE'
+    
+    return jsonify({
+        "base_score": 74,
+        "stressed_score": stressed_score,
+        "stressed_tier": tier,
+        "stressed_probability": '75%',
+        "adjusted_emi": 1763,
+        "currency": 'UZS',
+        "note": f"Simulated impact for: {scenario_type}",
+        "verdict": 'Business maintains acceptable repayment capacity under stress.'
+    })
+
+def is_data_related_query(message):
+    if not message:
+        return False
+    normalized = message.lower()
+    data_keywords = [
+        'score', 'risk', 'loan', 'business', 'revenue', 'cash', 'flow', 'location', 'traffic', 'profit',
+        'performance', 'data', 'document', 'pdf', 'upload', 'analysis', 'underwriting', 'terms', 'emi',
+        'credit', 'payment', 'gst', 'tax', 'history', 'improve', 'improvement', 'plan', 'project', 'customer', 'market'
+    ]
+    return any(keyword in normalized for keyword in data_keywords)
 
 
-   for country, data in MARKET_DATABASE.items():
-       if query.lower() in data['business_name'].lower() or query.lower() in country.lower() or query.lower() in data['city'].lower():
-           return jsonify(data)
-   return jsonify(MARKET_DATABASE['India'])
+def generate_general_chat_response(message):
+    normalized = message.lower().strip()
+    greetings = ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening']
+    if any(greeting in normalized for greeting in greetings):
+        return "Hello! I'm your Lendly underwriting assistant. Ask me anything about your project or the business data, and I will answer based on your question."
+    return (
+        f"You asked: \"{message}\". I can help with your project topic directly, and if you'd like me to use the on-screen business data, ask a data-specific question about loan score, risk, cash flow, business history, or improvement plans."
+    )
 
 
-@app.route('/api/chat', methods=['POST'])
-def process_chat():
-   payload = request.get_json(silent=True) or {}
-   message = payload.get('message', '')
-   country = payload.get('country', 'India')
-   business = MARKET_DATABASE.get(country, MARKET_DATABASE['India'])
-  
-   system_prompt = f"""You are Lendly's underwriting assistant.
-   Business Context:
-   - Name: {business['business_name']}
-   - Location: {business['city']} ({business['sector']})
-   - Score: {business['score']}/100 ({business['tier']})
-   - Probability: {business['probability']}
-   - Recommended Loan: {business['currency']}{business['loan_config']['default_amt']}
-  
-   Answer the underwriter's questions directly and specifically based on this data. Be professional, concise, and explain your reasoning. Never make up data. If you don't know, say so."""
-  
-   if not client:
-       return jsonify({"reply": "Groq API key is not configured. Set GROQ_API_KEY in your environment or .env file."}), 500
+def generate_business_chat_response(message, business_data):
+    if not business_data:
+        return "I can answer business data questions once a business profile is selected or a document is uploaded."
+
+    business_name = business_data.get('business_name', 'This business')
+    score = business_data.get('score', '--')
+    tier = business_data.get('tier', 'No tier available')
+    probability = business_data.get('probability', 'unknown repayment probability')
+    city = business_data.get('city', '')
+    cash_flow = business_data.get('cash_flow_volatility', 'unknown volatility')
+    revenue = business_data.get('profile', {}).get('monthly_revenue')
+    payment_velocity = business_data.get('metrics', {}).get('payment_velocity')
+    location_demand = business_data.get('metrics', {}).get('location_demand')
+
+    lower = message.lower()
+    if 'hello' in lower or 'hi' in lower or 'hey' in lower:
+        return (
+            f"Hello! I am looking at {business_name} in {city}. For business-specific answers, ask about score, risk, loan terms, or improvement actions."
+        )
+    if 'score' in lower or 'why' in lower or 'tier' in lower:
+        return (
+            f"{business_name} currently has a score of {score}/100 and is rated {tier}."
+            f" The model highlights payment velocity ({payment_velocity}%) and location demand ({location_demand}%) as the strongest drivers."
+        )
+    if 'risk' in lower or 'volatility' in lower or 'default' in lower:
+        return (
+            f"The main risk factor for {business_name} is cash-flow volatility at {cash_flow}."
+            " Strengthen documentation and improve monthly revenue consistency to reduce underwriting risk."
+        )
+    if 'loan' in lower or 'emi' in lower or 'terms' in lower or 'amount' in lower:
+        return (
+            f"For {business_name}, the recommended loan setup is based on the current profile and history."
+            f" The business is positioned for a structured loan with an affordable EMI, and the strongest repayment signal comes from stable payment velocity and location demand."
+        )
+    if 'improve' in lower or 'plan' in lower or 'growth' in lower or 'better' in lower:
+        return (
+            f"To improve {business_name}, focus on stronger document completeness, clearer cash-flow records, and higher local demand."
+            " Additional actions include diversifying revenue streams, improving customer retention, and tightening supplier agreements."
+        )
+
+    return (
+        f"Based on the on-screen business profile for {business_name}, the evaluation shows {tier} with {probability}."
+        " Ask a specific question about score, risk, loan terms, or business improvement for a more detailed answer."
+    )
 
 
-   # Cascade model routing to guarantee uptime
-   models_to_try = ["llama-3.1-8b-instant"]
-   reply = None
-   last_error = ""
-
-
-   for target_model in models_to_try:
-       try:
-           completion = client.chat.completions.create(
-               model=target_model,
-               messages=[
-                   {"role": "system", "content": system_prompt},
-                   {"role": "user", "content": message}
-               ],
-               temperature=0.3, max_tokens=300
-           )
-           reply = completion.choices[0].message.content
-           if reply:
-               break
-       except Exception as e:
-           last_error = str(e)
-           continue
-          
-   if not reply:
-       reply = f"API Pipeline issue. Diagnostics: {last_error if last_error else 'Timeout'}"
-      
-   return jsonify({"reply": reply})
+@app.route('/api/narrative', methods=['POST'])
+def narrative():
+    data = request.get_json() or {}
+    active_layers = data.get('active_layers', [])
+    layer_text = ', '.join(active_layers) if active_layers else 'core business signals'
+    time.sleep(1)
+    return jsonify({
+        "memo": "**Executive Summary:**\nThis analysis is focused on loan viability and business history for your underwriting project. It reviews current cash-flow stability, payment behaviour, and local demand using "
+                  f"{layer_text}.\n\n**Improvement Plan:**\n1. Strengthen formal documentation and customer data capture.\n2. Improve monthly revenue consistency with targeted local offers.\n3. Reduce cash-flow volatility by diversifying product mix and payment channels.\n\n**Loan Recommendation:**\nThe business is best served with a conservative loan structure that preserves affordability while supporting measured growth."
+    })
 
 
 @app.route('/api/upload-document', methods=['POST'])
 def upload_document():
-   if 'document' not in request.files:
-       return jsonify({"error": "No file uploaded"}), 400
-  
-   file = request.files['document']
-   filename = secure_filename(file.filename)
-  
-   time.sleep(1.8)
-   doc_type = "GST Certificate" if "gst" in filename.lower() else ("Bank Statement" if "bank" in filename.lower() else "Utility Bill")
-  
-   return jsonify({
-       "document_name": filename,
-       "document_type": doc_type,
-       "confidence_score": 0.98,
-       "fraud_check": {
-           "fraud_risk": "LOW (2/100)",
-           "red_flags": []
-       },
-       "verification_summary": {
-           "business_legitimacy": "VERIFIED (GST + Bank match)",
-           "address_verification": "VERIFIED (Matches utility)",
-           "income_verification": "VERIFIED (Matches stated metrics)",
-           "payment_reliability": "VERIFIED (0 failed payments)"
-       },
-       "missing_documents": ["Aadhar card (Optional)", "Shop photos (Optional)"],
-       "outstanding_questions": ["Any upcoming business disruptions?", "Can you provide a co-signer?"],
-       "recommendation": "All critical documents verified. No fraud indicators. Ready for approval processing."
-   })
+    time.sleep(1.5)
+    doc_name = "Uploaded_Document.pdf"
+    if 'document' in request.files:
+        doc_name = request.files['document'].filename
 
+    country = request.form.get('country', 'Uzbekistan')
+    business_name = request.form.get('business', 'the selected business')
+
+    biz_data = generate_mock_business_data(business_name if business_name else 'Uploaded Business', country, 39.654610, 66.975086)
+    biz_data['city'] = request.form.get('city', biz_data['city'])
+
+    analysis_text = (
+        f"The uploaded PDF {doc_name} was analyzed for {business_name}. "
+        "It shows the business history and loan profile in a way that supports underwriting decisions. "
+        "Key insights include stable payment patterns, local demand potential, and the need to complete missing documentation for faster approval."
+    )
+
+    improvement_plan = (
+        "Improvement plan: 1) Strengthen document completeness and financial records. "
+        "2) Formalize cash-flow tracking and payment history. 3) Increase local market visibility and customer retention. "
+        "4) Use loan proceeds to optimize inventory and supplier terms for more stable revenue."
+    )
+
+    return jsonify({
+        "document_name": doc_name,
+        "document_type": "Business Report",
+        "confidence_score": 0.98,
+        "verification_summary": {
+            "business_legitimacy": "Entity matches the provided business credentials",
+            "address_verification": "Address aligns with the uploaded business documentation",
+            "income_verification": "Revenue and cash flow are consistent with declared figures",
+            "payment_reliability": "No major payment exceptions detected"
+        },
+        "fraud_check": { "fraud_risk": "LOW RISK (2%)" },
+        "missing_documents": ["Lease Agreement"],
+        "outstanding_questions": ["Please provide additional revenue backup for the last quarter."],
+        "ai_insight": analysis_text,
+        "improvement_plan": improvement_plan,
+        "recommendation": "Use the uploaded document analysis to refine underwriting and present a business improvement roadmap.",
+        "business_data": biz_data
+    })
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.get_json() or {}
+    message = data.get('message', '').strip()
+    business_data = data.get('business_data') or {}
+
+    if not message:
+        return jsonify({"reply": "Please type your question so I can help with your project or business data."})
+
+    if is_data_related_query(message) and business_data:
+        reply = generate_business_chat_response(message, business_data)
+    elif is_data_related_query(message):
+        reply = (
+            "I can answer business and loan-related questions once a business profile is loaded or a document is uploaded. "
+            "Please ask a question about the current business data or upload the relevant PDF."
+        )
+    else:
+        reply = generate_general_chat_response(message)
+
+    time.sleep(1)
+    return jsonify({"reply": reply})
 
 if __name__ == '__main__':
-   app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5001)), debug=True)
-
+    print("🚀 Lendly Server running at: http://127.0.0.1:5000")
+    app.run(port=5000, debug=True)
